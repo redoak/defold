@@ -92,6 +92,12 @@ namespace dmRender
         RESULT_TYPE_MISMATCH = -5,
     };
 
+    enum ConstantLocationFlag
+    {
+        CONSTANT_LOCATION_FLAG_ATTRIBUTE = 0,
+        CONSTANT_LOCATION_FLAG_UNIFORM   = 1,
+    };
+
     /*#
      * Get the vertex space (local or world)
      * @name dmRender::GetMaterialVertexSpace
@@ -449,6 +455,10 @@ namespace dmRender
      * @param location [type: int32_t] the location
     */
     void SetConstantLocation(HConstant constant, int32_t location);
+
+    void SetConstantLocationFlag(HConstant constant, ConstantLocationFlag location_flag);
+
+    ConstantLocationFlag GetConstantLocationFlag(HConstant constant);
 
     /*#
      * Gets the type of the constant

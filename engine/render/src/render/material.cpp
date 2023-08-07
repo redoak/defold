@@ -73,6 +73,60 @@ namespace dmRender
         return (dmGraphics::VertexAttribute::DataType) -1;
     }
 
+    static inline bool IsConstantType(dmGraphics::Type type)
+    {
+        return type == dmGraphics::TYPE_FLOAT_VEC4 || type == dmGraphics::TYPE_FLOAT_MAT4;
+    }
+
+    static void CreateConstant(Material* material, char* name_buffer, uint32_t name_buffer_size, dmhash_t name_hash, int32_t location, dmGraphics::Type type, uint32_t num_values, ConstantLocationFlag location_flag, dmArray<dmVMath::Vector4>& constant_values_scratch)
+    {
+        HConstant render_constant = dmRender::NewConstant(name_hash);
+        dmRender::SetConstantLocation(render_constant, location);
+        dmRender::SetConstantLocationFlag(render_constant, location_flag);
+
+        if (type == dmGraphics::TYPE_FLOAT_MAT4)
+        {
+            num_values *= 4;
+            dmRender::SetConstantType(render_constant, dmRenderDDF::MaterialDesc::CONSTANT_TYPE_USER_MATRIX4);
+        }
+
+        if (constant_values_scratch.Capacity() < num_values)
+        {
+            constant_values_scratch.SetCapacity(num_values);
+            memset(constant_values_scratch.Begin(), 0, constant_values_scratch.End() - constant_values_scratch.Begin());
+        }
+
+        dmRender::SetConstantValues(render_constant, constant_values_scratch.Begin(), num_values);
+
+        MaterialConstant constant;
+        constant.m_Constant = render_constant;
+
+        if (type == dmGraphics::TYPE_FLOAT_VEC4)
+        {
+            size_t original_size = strlen(name_buffer);
+            dmStrlCat(name_buffer, ".x", name_buffer_size);
+            constant.m_ElementIds[0] = dmHashString64(name_buffer);
+            name_buffer[original_size] = 0;
+            dmStrlCat(name_buffer, ".y", name_buffer_size);
+            constant.m_ElementIds[1] = dmHashString64(name_buffer);
+            name_buffer[original_size] = 0;
+            dmStrlCat(name_buffer, ".z", name_buffer_size);
+            constant.m_ElementIds[2] = dmHashString64(name_buffer);
+            name_buffer[original_size] = 0;
+            dmStrlCat(name_buffer, ".w", name_buffer_size);
+            constant.m_ElementIds[3] = dmHashString64(name_buffer);
+            name_buffer[original_size] = 0;
+        } else {
+            // Clear element ids, otherwise we will compare against
+            // uninitialized values in GetMaterialProgramConstantInfo.
+            constant.m_ElementIds[0] = 0;
+            constant.m_ElementIds[1] = 0;
+            constant.m_ElementIds[2] = 0;
+            constant.m_ElementIds[3] = 0;
+        }
+        material->m_Constants.Push(constant);
+    }
+
     static void CreateVertexDeclaration(dmGraphics::HContext graphics_context, Material* m)
     {
         if (m->m_VertexDeclaration != 0)
@@ -97,7 +151,7 @@ namespace dmRender
         dmGraphics::DeleteVertexStreamDeclaration(stream_declaration);
     }
 
-    static void CreateAttributes(dmGraphics::HContext graphics_context, Material* m)
+    static void CreateAttributeConstants(dmGraphics::HContext graphics_context, Material* m, dmArray<dmVMath::Vector4>& values_scratch)
     {
         uint32_t num_program_attributes  = dmGraphics::GetAttributeCount(m->m_Program);
         uint32_t num_attribute_byte_size = 0;
@@ -106,6 +160,9 @@ namespace dmRender
         m->m_MaterialAttributes.SetSize(num_program_attributes);
         m->m_VertexAttributes.SetCapacity(num_program_attributes);
         m->m_VertexAttributes.SetSize(num_program_attributes);
+
+        const uint32_t name_buffer_size = 128;
+        char name_buffer[name_buffer_size];
 
         for (int i = 0; i < num_program_attributes; ++i)
         {
@@ -116,6 +173,7 @@ namespace dmRender
             int32_t location       = -1;
 
             dmGraphics::GetAttribute(m->m_Program, i, &name_hash, &type, &element_count, &num_values, &location);
+            dmGraphics::GetAttributeName(m->m_Program, i, name_buffer, name_buffer_size);
 
             dmGraphics::VertexAttribute& vertex_attribute = m->m_VertexAttributes[i];
             vertex_attribute.m_NameHash        = name_hash;
@@ -134,6 +192,14 @@ namespace dmRender
 
             num_attribute_byte_size += dmGraphics::GetTypeSize(base_type) * element_count;
 
+            /*
+            if (IsConstantType(type))
+            {
+                m->m_Constants.OffsetCapacity(1);
+                CreateConstant(m, name_buffer, name_buffer_size, name_hash, location, type, num_values, CONSTANT_LOCATION_FLAG_ATTRIBUTE, values_scratch);
+            }
+            */
+
         #if 0 // Debugging
             dmLogInfo("Vertex Attribute: %s", dmHashReverseSafe64(name_hash));
             dmLogInfo("type: %d, ele_count: %d, num_vals: %d, loc: %d, valueIndex: %d",
@@ -146,7 +212,7 @@ namespace dmRender
         memset(m->m_MaterialAttributeValues.Begin(), 0, num_attribute_byte_size);
     }
 
-    void CreateConstants(HMaterial material)
+    void CreateUniformConstants(HMaterial material, dmArray<dmVMath::Vector4>& values_scratch)
     {
         uint32_t total_constants_count = dmGraphics::GetUniformCount(material->m_Program);
         const uint32_t buffer_size = 128;
@@ -177,8 +243,10 @@ namespace dmRender
 
         if ((constants_count + samplers_count) > 0)
         {
-            material->m_NameHashToLocation.SetCapacity((constants_count + samplers_count), (constants_count + samplers_count) * 2);
-            material->m_Constants.SetCapacity(constants_count);
+            uint32_t name_hash_to_location_new_capacity = constants_count + samplers_count + material->m_NameHashToLocation.Capacity();
+            uint32_t constants_new_capacity = material->m_Constants.Capacity() + constants_count;
+            material->m_NameHashToLocation.SetCapacity(name_hash_to_location_new_capacity, name_hash_to_location_new_capacity * 2);
+            material->m_Constants.SetCapacity(constants_new_capacity);
         }
 
         if (samplers_count > 0)
@@ -190,8 +258,6 @@ namespace dmRender
             }
         }
 
-        uint32_t default_values_capacity = 0;
-        dmVMath::Vector4* default_values = 0;
         uint32_t sampler_index = 0;
 
         for (uint32_t i = 0; i < total_constants_count; ++i)
@@ -225,56 +291,10 @@ namespace dmRender
 
             dmhash_t name_hash = dmHashString64(buffer);
 
-            if (type == dmGraphics::TYPE_FLOAT_VEC4 || type == dmGraphics::TYPE_FLOAT_MAT4)
+            if (IsConstantType(type))
             {
                 material->m_NameHashToLocation.Put(name_hash, location);
-
-                HConstant render_constant = dmRender::NewConstant(name_hash);
-                dmRender::SetConstantLocation(render_constant, location);
-
-                if (type == dmGraphics::TYPE_FLOAT_MAT4)
-                {
-                    num_values *= 4;
-                    dmRender::SetConstantType(render_constant, dmRenderDDF::MaterialDesc::CONSTANT_TYPE_USER_MATRIX4);
-                }
-
-                // Set correct size of the constant (Until the shader builder provides all the default values)
-                if (num_values > default_values_capacity)
-                {
-                    default_values_capacity = num_values;
-                    delete[] default_values;
-                    default_values = new dmVMath::Vector4[default_values_capacity];
-                    memset(default_values, 0, default_values_capacity * sizeof(dmVMath::Vector4));
-                }
-                dmRender::SetConstantValues(render_constant, default_values, num_values);
-
-                MaterialConstant constant;
-                constant.m_Constant = render_constant;
-
-                if (type == dmGraphics::TYPE_FLOAT_VEC4)
-                {
-                    size_t original_size = strlen(buffer);
-                    dmStrlCat(buffer, ".x", sizeof(buffer));
-                    constant.m_ElementIds[0] = dmHashString64(buffer);
-                    buffer[original_size] = 0;
-                    dmStrlCat(buffer, ".y", sizeof(buffer));
-                    constant.m_ElementIds[1] = dmHashString64(buffer);
-                    buffer[original_size] = 0;
-                    dmStrlCat(buffer, ".z", sizeof(buffer));
-                    constant.m_ElementIds[2] = dmHashString64(buffer);
-                    buffer[original_size] = 0;
-                    dmStrlCat(buffer, ".w", sizeof(buffer));
-                    constant.m_ElementIds[3] = dmHashString64(buffer);
-                    buffer[original_size] = 0;
-                } else {
-                    // Clear element ids, otherwise we will compare against
-                    // uninitialized values in GetMaterialProgramConstantInfo.
-                    constant.m_ElementIds[0] = 0;
-                    constant.m_ElementIds[1] = 0;
-                    constant.m_ElementIds[2] = 0;
-                    constant.m_ElementIds[3] = 0;
-                }
-                material->m_Constants.Push(constant);
+                CreateConstant(material, buffer, buffer_size, name_hash, location, type, num_values, CONSTANT_LOCATION_FLAG_UNIFORM, values_scratch);
             }
             else if (type == dmGraphics::TYPE_SAMPLER_2D || type == dmGraphics::TYPE_SAMPLER_CUBE || type == dmGraphics::TYPE_SAMPLER_2D_ARRAY)
             {
@@ -298,8 +318,6 @@ namespace dmRender
                 sampler_index++;
             }
         }
-
-        delete[] default_values;
     }
 
     HMaterial NewMaterial(dmRender::HRenderContext render_context, dmGraphics::HVertexProgram vertex_program, dmGraphics::HFragmentProgram fragment_program)
@@ -318,9 +336,10 @@ namespace dmRender
         m->m_Program           = program;
         m->m_VertexDeclaration = 0;
 
-        CreateAttributes(graphics_context, m);
+        dmArray<dmVMath::Vector4> values_scratch;
+        CreateAttributeConstants(graphics_context, m, values_scratch);
+        CreateUniformConstants(m, values_scratch);
         CreateVertexDeclaration(graphics_context, m);
-        CreateConstants(m);
 
         return (HMaterial)m;
     }
@@ -347,6 +366,12 @@ namespace dmRender
         {
             const MaterialConstant& material_constant = constants[i];
             const HConstant constant = material_constant.m_Constant;
+
+            if (GetConstantLocationFlag(constant) == CONSTANT_LOCATION_FLAG_ATTRIBUTE)
+            {
+                continue;
+            }
+
             int32_t location = GetConstantLocation(constant);
             dmRenderDDF::MaterialDesc::ConstantType type = GetConstantType(constant);
 

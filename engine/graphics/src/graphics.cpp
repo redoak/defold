@@ -991,6 +991,10 @@ namespace dmGraphics
     {
         return g_functions.m_GetAttribute(prog, index, name_hash, type, element_count, num_values, location);
     }
+    uint32_t GetAttributeName(HProgram prog, uint32_t index, char* buffer, uint32_t buffer_size)
+    {
+        return g_functions.m_GetAttributeName(prog, index, buffer, buffer_size);
+    }
     uint32_t GetUniformName(HProgram prog, uint32_t index, char* buffer, uint32_t buffer_size, Type* type, int32_t* size)
     {
         return g_functions.m_GetUniformName(prog, index, buffer, buffer_size, type, size);

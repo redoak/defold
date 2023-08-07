@@ -860,6 +860,12 @@ namespace dmGraphics
         *location              = binding.m_Index;
     }
 
+    static uint32_t NullGetAttributeName(HProgram prog, uint32_t index, char* buffer, uint32_t buffer_size)
+    {
+        // COPY binding.m_Name
+        return 0;
+    }
+
     static uint32_t NullGetUniformCount(HProgram prog)
     {
         return ((Program*)prog)->m_Uniforms.Size();

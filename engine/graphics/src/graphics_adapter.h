@@ -113,6 +113,7 @@ namespace dmGraphics
     typedef bool (*ReloadProgramFn)(HContext context, HProgram program, HVertexProgram vert_program, HFragmentProgram frag_program);
     typedef uint32_t (*GetAttributeCountFn)(HProgram prog);
     typedef void (*GetAttributeFn)(HProgram prog, uint32_t index, dmhash_t* name_hash, Type* type, uint32_t* element_count, uint32_t* num_values, int32_t* location);
+    typedef uint32_t (*GetAttributeNameFn)(HProgram prog, uint32_t index, char* buffer, uint32_t buffer_size);
     typedef uint32_t (*GetUniformNameFn)(HProgram prog, uint32_t index, char* buffer, uint32_t buffer_size, Type* type, int32_t* size);
     typedef uint32_t (*GetUniformCountFn)(HProgram prog);
     typedef int32_t (* GetUniformLocationFn)(HProgram prog, const char* name);
@@ -229,6 +230,7 @@ namespace dmGraphics
         ReloadProgramFn m_ReloadProgram;
         GetAttributeCountFn m_GetAttributeCount;
         GetAttributeFn m_GetAttribute;
+        GetAttributeNameFn m_GetAttributeName;
         GetUniformNameFn m_GetUniformName;
         GetUniformCountFn m_GetUniformCount;
         GetUniformLocationFn m_GetUniformLocation;
@@ -347,6 +349,7 @@ namespace dmGraphics
         DM_REGISTER_GRAPHICS_FUNCTION(tbl, adapter_name, ReloadProgram); \
         DM_REGISTER_GRAPHICS_FUNCTION(tbl, adapter_name, GetAttributeCount); \
         DM_REGISTER_GRAPHICS_FUNCTION(tbl, adapter_name, GetAttribute); \
+        DM_REGISTER_GRAPHICS_FUNCTION(tbl, adapter_name, GetAttributeName); \
         DM_REGISTER_GRAPHICS_FUNCTION(tbl, adapter_name, GetUniformName); \
         DM_REGISTER_GRAPHICS_FUNCTION(tbl, adapter_name, GetUniformCount); \
         DM_REGISTER_GRAPHICS_FUNCTION(tbl, adapter_name, GetUniformLocation); \

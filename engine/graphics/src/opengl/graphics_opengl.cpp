@@ -2219,6 +2219,23 @@ static void LogFrameBufferError(GLenum status)
         *element_count              = GetElementCount(attr.m_Type);
     }
 
+    static uint32_t OpenGLGetAttributeName(HProgram prog, uint32_t index, char* buffer, uint32_t buffer_size)
+    {
+        char attribute_name[256];
+        GLsizei attr_len;
+        GLint   attr_size;
+        GLenum  attr_type;
+        OpenGLProgram* program_ptr = (OpenGLProgram*) prog;
+        glGetActiveAttrib(program_ptr->m_Id, index,
+            sizeof(attribute_name),
+            &attr_len,
+            &attr_size,
+            &attr_type,
+            attribute_name);
+        CHECK_GL_ERROR;
+        return (uint32_t) attr_size;
+    }
+
     static uint32_t OpenGLGetUniformCount(HProgram prog)
     {
         GLint count;

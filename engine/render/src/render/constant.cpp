@@ -26,6 +26,7 @@ Constant::Constant(dmhash_t name_hash, int32_t location)
     : m_Values(0)
     , m_NameHash(name_hash)
     , m_Type(dmRenderDDF::MaterialDesc::CONSTANT_TYPE_USER)
+    , m_LocationFlag(CONSTANT_LOCATION_FLAG_UNIFORM)
     , m_Location(location)
     , m_NumValues(0)
 {
@@ -84,6 +85,16 @@ int32_t GetConstantLocation(HConstant constant)
 void SetConstantLocation(HConstant constant, int32_t location)
 {
     constant->m_Location = location;
+}
+
+ConstantLocationFlag GetConstantLocationFlag(HConstant constant)
+{
+    return constant->m_LocationFlag;
+}
+
+void SetConstantLocationFlag(HConstant constant, ConstantLocationFlag location_flag)
+{
+    constant->m_LocationFlag = location_flag;
 }
 
 dmRenderDDF::MaterialDesc::ConstantType GetConstantType(HConstant constant)

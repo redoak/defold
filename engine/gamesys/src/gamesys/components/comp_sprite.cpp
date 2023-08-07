@@ -74,6 +74,9 @@ namespace dmGameSystem
         HComponentRenderConstants   m_RenderConstants;
         TextureSetResource*         m_TextureSet;
         MaterialResource*           m_Material;
+
+        dmArray<dmGraphics::VertexAttribute>* m_DynamicVertexAttributes;
+
         /// Currently playing animation
         dmhash_t                    m_CurrentAnimation;
         uint32_t                    m_CurrentAnimationFrame;
@@ -421,18 +424,46 @@ namespace dmGameSystem
         return dmGameObject::CREATE_RESULT_OK;
     }
 
+    static dmGraphics::VertexAttribute* FindDynamicSpriteAttribute(const SpriteComponent* component, dmhash_t name_hash)
+    {
+        dmArray<dmGraphics::VertexAttribute>& dynamic_attributes = *component->m_DynamicVertexAttributes;
+
+        for (int i = 0; i < dynamic_attributes.Size(); ++i)
+        {
+            if (dynamic_attributes[i].m_NameHash == name_hash)
+            {
+                return &dynamic_attributes[i];
+            }
+        }
+
+        return 0;
+    }
+
     // Prepares the list of sprite attributes that could potentially overrides an already specified material attribute
-    static void FillSpriteAttributeInfos(SpriteAttributeInfo* material_infos, const dmGraphics::VertexAttribute* sprite_attributes, uint32_t sprite_attribute_count, SpriteAttributeInfo* sprite_infos)
+    static void FillSpriteAttributeInfos(const SpriteComponent* component, SpriteAttributeInfo* material_infos, const dmGraphics::VertexAttribute* sprite_attributes, uint32_t sprite_attribute_count, SpriteAttributeInfo* sprite_infos)
     {
         sprite_infos->m_NumInfos = material_infos->m_NumInfos;
         for (int i = 0; i < material_infos->m_NumInfos; ++i)
         {
-            int sprite_attribute_index = FindSpriteAttributeIndex(sprite_attributes, sprite_attribute_count, material_infos->m_Infos[i].m_Attribute->m_NameHash);
-            sprite_infos->m_Infos[i]   = material_infos->m_Infos[i];
+            sprite_infos->m_Infos[i] = material_infos->m_Infos[i];
+            dmGraphics::VertexAttribute* dynamic_attribute = 0;
 
-            if (sprite_attribute_index >= 0)
+            if (component->m_DynamicVertexAttributes)
             {
-                dmGraphics::GetAttributeValues(sprite_attributes[sprite_attribute_index], &sprite_infos->m_Infos[i].m_ValuePtr, &sprite_infos->m_Infos[i].m_ValueByteSize);
+                dynamic_attribute = FindDynamicSpriteAttribute(component, material_infos->m_Infos[i].m_Attribute->m_NameHash);
+            }
+
+            if (dynamic_attribute)
+            {
+                dmGraphics::GetAttributeValues(*dynamic_attribute, &sprite_infos->m_Infos[i].m_ValuePtr, &sprite_infos->m_Infos[i].m_ValueByteSize);
+            }
+            else
+            {
+                int sprite_attribute_index = FindSpriteAttributeIndex(sprite_attributes, sprite_attribute_count, material_infos->m_Infos[i].m_Attribute->m_NameHash);
+                if (sprite_attribute_index >= 0)
+                {
+                    dmGraphics::GetAttributeValues(sprite_attributes[sprite_attribute_index], &sprite_infos->m_Infos[i].m_ValuePtr, &sprite_infos->m_Infos[i].m_ValueByteSize);
+                }
             }
         }
     }
@@ -657,7 +688,7 @@ namespace dmGameSystem
             SpriteAttributeInfo* sprite_attribute_info_ptr = material_attribute_info;
             if (sprite_attribute_count > 0)
             {
-                FillSpriteAttributeInfos(material_attribute_info, component->m_Resource->m_DDF->m_Attributes.m_Data, sprite_attribute_count, &sprite_attribute_info);
+                FillSpriteAttributeInfos(component, material_attribute_info, component->m_Resource->m_DDF->m_Attributes.m_Data, sprite_attribute_count, &sprite_attribute_info);
                 sprite_attribute_info_ptr = &sprite_attribute_info;
             }
 
@@ -1448,6 +1479,140 @@ namespace dmGameSystem
             PlayAnimation(component, component->m_CurrentAnimation, component->m_AnimTimer, component->m_PlaybackRate);
     }
 
+    static int FindMaterialAttributeIndex(dmRender::HMaterial material, dmhash_t name_hash, const dmGraphics::VertexAttribute** material_attribute)
+    {
+        const dmGraphics::VertexAttribute* material_attributes;
+        uint32_t material_attributes_count;
+        dmRender::GetMaterialProgramAttributes(material, &material_attributes, &material_attributes_count);
+        uint32_t num_attributes = dmMath::Min(material_attributes_count, (uint32_t) dmGraphics::MAX_VERTEX_STREAM_COUNT);
+
+        for (int i = 0; i < num_attributes; ++i)
+        {
+            const dmGraphics::VertexAttribute* attribute = material_attributes + i;
+            if (attribute->m_NameHash == name_hash)
+            {
+                *material_attribute = attribute;
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    static dmGameObject::PropertyResult GetAttributeProperty(SpriteComponent* component, dmhash_t name_hash, dmGameObject::PropertyDesc& out_desc)
+    {
+        dmRender::HMaterial material = GetMaterial(component, component->m_Resource);
+
+        const dmGraphics::VertexAttribute* material_attribute = 0;
+        int32_t material_attribute_ix = FindMaterialAttributeIndex(material, name_hash, &material_attribute);
+
+        if (material_attribute_ix >= 0)
+        {
+            const dmGraphics::VertexAttribute* sprite_attributes = component->m_Resource->m_DDF->m_Attributes.m_Data;
+            uint32_t sprite_attribute_count                      = component->m_Resource->m_DDF->m_Attributes.m_Count;
+
+            const uint8_t* value_ptr;
+            uint32_t value_byte_size;
+
+            int sprite_attribute_index = FindSpriteAttributeIndex(sprite_attributes, sprite_attribute_count, name_hash);
+            if (sprite_attribute_index >= 0)
+            {
+                dmGraphics::GetAttributeValues(sprite_attributes[sprite_attribute_index], &value_ptr, &value_byte_size);
+            }
+            else
+            {
+                dmRender::GetMaterialProgramAttributeValues(material, material_attribute_ix, &value_ptr, &value_byte_size);
+            }
+
+            switch(material_attribute->m_ElementCount)
+            {
+                case 1:
+                    out_desc.m_Variant = dmGameObject::PropertyVar(*((float*) value_ptr));
+                    break;
+                case 3:
+                    out_desc.m_Variant = dmGameObject::PropertyVar(*((dmVMath::Vector3*) value_ptr));
+                    break;
+                case 4:
+                    out_desc.m_Variant = dmGameObject::PropertyVar(*((dmVMath::Vector4*) value_ptr));
+                    break;
+                default: return dmGameObject::PROPERTY_RESULT_UNSUPPORTED_TYPE;
+            }
+
+            out_desc.m_ValueType   = dmGameObject::PROP_VALUE_ARRAY;
+            out_desc.m_ArrayLength = 1;
+
+            return dmGameObject::PROPERTY_RESULT_OK;
+        }
+
+        return dmGameObject::PROPERTY_RESULT_NOT_FOUND;
+    }
+
+    dmGameObject::PropertyResult SetAttributeProperty(SpriteComponent* component, dmhash_t name_hash, const dmGameObject::PropertyVar& var)
+    {
+        dmRender::HMaterial material = GetMaterial(component, component->m_Resource);
+
+        const dmGraphics::VertexAttribute* material_attribute = 0;
+        int32_t material_attribute_ix = FindMaterialAttributeIndex(material, name_hash, &material_attribute);
+
+        if (material_attribute_ix >= 0)
+        {
+            if (!component->m_DynamicVertexAttributes)
+            {
+                component->m_DynamicVertexAttributes = new dmArray<dmGraphics::VertexAttribute>();
+            }
+
+            const uint8_t* value_ptr;
+            uint32_t value_byte_size;
+
+            dmGraphics::VertexAttribute* component_attribute = FindDynamicSpriteAttribute(component, name_hash);
+            if (!component_attribute)
+            {
+                dmRender::GetMaterialProgramAttributeValues(material, material_attribute_ix, &value_ptr, &value_byte_size);
+
+                dmGraphics::VertexAttribute sprite_attribute     = {};
+                sprite_attribute.m_NameHash                      = name_hash;
+                sprite_attribute.m_Values.m_BinaryValues.m_Data  = (uint8_t*) malloc(value_byte_size);
+                sprite_attribute.m_Values.m_BinaryValues.m_Count = value_byte_size;
+
+                component->m_DynamicVertexAttributes->OffsetCapacity(1);
+                component->m_DynamicVertexAttributes->Push(sprite_attribute);
+
+                component_attribute = &component->m_DynamicVertexAttributes->Back();
+            }
+
+            dmGraphics::GetAttributeValues(*((const dmGraphics::VertexAttribute*) component_attribute), &value_ptr, &value_byte_size);
+            memcpy((void*) value_ptr, var.m_M4, value_byte_size);
+
+            // dmGraphics::VertexAttribute sprite_attribute = {};
+            // component->m_DynamicVertexAttributes.OffsetCapacity()
+
+            /*
+            const dmGraphics::VertexAttribute* sprite_attributes = component->m_Resource->m_DDF->m_Attributes.m_Data;
+            uint32_t sprite_attribute_count                      = component->m_Resource->m_DDF->m_Attributes.m_Count;
+
+            const uint8_t* value_ptr;
+            uint32_t value_byte_size;
+
+            int sprite_attribute_index = FindSpriteAttributeIndex(sprite_attributes, sprite_attribute_count, name_hash);
+            if (sprite_attribute_index >= 0)
+            {
+                dmGraphics::GetAttributeValues(sprite_attributes[sprite_attribute_index], &value_ptr, &value_byte_size);
+            }
+            else
+            {
+                dmRender::GetMaterialProgramAttributeValues(material, material_attribute_ix, &value_ptr, &value_byte_size);
+            }
+
+            assert(value_byte_size < sizeof(var.m_M4));
+            memcpy((void*) value_ptr, var.m_M4, value_byte_size);
+            */
+
+            return dmGameObject::PROPERTY_RESULT_OK;
+        }
+
+        return dmGameObject::PROPERTY_RESULT_NOT_FOUND;
+    }
+
     dmGameObject::PropertyResult CompSpriteGetProperty(const dmGameObject::ComponentGetPropertyParams& params, dmGameObject::PropertyDesc& out_value)
     {
         SpriteWorld* sprite_world = (SpriteWorld*)params.m_World;
@@ -1494,7 +1659,12 @@ namespace dmGameSystem
             out_value.m_Variant = dmGameObject::PropertyVar(GetAnimationFrameCount(component));
             return dmGameObject::PROPERTY_RESULT_OK;
         }
-        return GetMaterialConstant(GetMaterial(component, component->m_Resource), get_property, params.m_Options.m_Index, out_value, false, CompSpriteGetConstantCallback, component);
+        else if (GetMaterialConstant(GetMaterial(component, component->m_Resource), get_property, params.m_Options.m_Index, out_value, false, CompSpriteGetConstantCallback, component) == dmGameObject::PROPERTY_RESULT_OK)
+        {
+            return dmGameObject::PROPERTY_RESULT_OK;
+        }
+
+        return GetAttributeProperty(component, get_property, out_value);
     }
 
     dmGameObject::PropertyResult CompSpriteSetProperty(const dmGameObject::ComponentSetPropertyParams& params)
@@ -1516,7 +1686,7 @@ namespace dmGameSystem
 
             return SetProperty(set_property, params.m_Value, component->m_Size, SPRITE_PROP_SIZE);
         }
-        else if (params.m_PropertyId == SPRITE_PROP_CURSOR)
+        else if (set_property == SPRITE_PROP_CURSOR)
         {
             if (params.m_Value.m_Type != dmGameObject::PROPERTY_TYPE_NUMBER)
                 return dmGameObject::PROPERTY_RESULT_TYPE_MISMATCH;
@@ -1524,7 +1694,7 @@ namespace dmGameSystem
             SetCursor(component, params.m_Value.m_Number);
             return dmGameObject::PROPERTY_RESULT_OK;
         }
-        else if (params.m_PropertyId == SPRITE_PROP_PLAYBACK_RATE)
+        else if (set_property == SPRITE_PROP_PLAYBACK_RATE)
         {
             if (params.m_Value.m_Type != dmGameObject::PROPERTY_TYPE_NUMBER)
                 return dmGameObject::PROPERTY_RESULT_TYPE_MISMATCH;
@@ -1568,7 +1738,11 @@ namespace dmGameSystem
         {
             return dmGameObject::PROPERTY_RESULT_READ_ONLY;
         }
-        return SetMaterialConstant(GetMaterial(component, component->m_Resource), params.m_PropertyId, params.m_Value, params.m_Options.m_Index, CompSpriteSetConstantCallback, component);
+        else if (SetMaterialConstant(GetMaterial(component, component->m_Resource), set_property, params.m_Value, params.m_Options.m_Index, CompSpriteSetConstantCallback, component) == dmGameObject::PROPERTY_RESULT_OK)
+        {
+            return dmGameObject::PROPERTY_RESULT_OK;
+        }
+        return SetAttributeProperty(component, set_property, params.m_Value);
     }
 
     static bool CompSpriteIterPropertiesGetNext(dmGameObject::SceneNodePropertyIterator* pit)

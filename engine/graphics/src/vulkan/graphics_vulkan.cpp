@@ -2556,6 +2556,14 @@ bail:
         *element_count = GetShaderTypeSize(attr.m_Type) / sizeof(float);
     }
 
+    static uint32_t VulkanGetAttributeName(HProgram prog, uint32_t index, char* buffer, uint32_t buffer_size)
+    {
+        Program* program_ptr = (Program*) prog;
+        assert(index < program_ptr->m_VertexModule->m_InputCount);
+        ShaderResourceBinding& attr = program_ptr->m_VertexModule->m_Inputs[index];
+        return dmStrlCpy(buffer, attr.m_Name, buffer_size);
+    }
+
     static uint32_t VulkanGetUniformCount(HProgram prog)
     {
         assert(prog);
