@@ -397,7 +397,7 @@ namespace dmGraphics
      * @params context Graphics context handle
      * @return The window refresh rate, 0 if refresh rate could not be read.
      */
-    uint32_t GetWindowRefreshRate(HContext context);
+    // uint32_t GetWindowRefreshRate(HContext context);
 
     /**
      * Open a window

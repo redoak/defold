@@ -71,8 +71,12 @@ namespace dmEngineVersion
 
     sound_lib = 'sound'
 
+    glfw = "glfw"
+
     if operating_sys == 'macos':
         conf.env.append_value('LINKFLAGS', ['-framework', 'Cocoa', '-framework', 'OpenGL', '-framework', 'OpenAL', '-framework', 'AGL', '-framework', 'IOKit', '-framework', 'Carbon', '-framework', 'CoreVideo', '-framework', 'QuartzCore'])
+
+        glfw = "glfw3"
 
         # For Vulkan/MoltenVK
         if waflib.Options.options.with_vulkan and architecture == 'x86_64':
@@ -113,7 +117,7 @@ namespace dmEngineVersion
     conf.env['STLIB_GAMESYS'] = 'gamesys'
     conf.env['STLIB_GAMEOBJECT'] = 'gameobject'
     conf.env['STLIB_SCRIPT'] = 'script'
-    conf.env['STLIB_DMGLFW'] = 'dmglfw'
+    conf.env['STLIB_DMGLFW'] = glfw
     conf.env['STLIB_GUI'] = 'gui'
     conf.env['STLIB_PARTICLE'] = 'particle'
     conf.env['STLIB_RIG'] = 'rig'

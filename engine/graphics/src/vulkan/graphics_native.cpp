@@ -12,8 +12,13 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-#include <dmsdk/graphics/glfw/glfw.h>
-#include <graphics/glfw/glfw_native.h>
+#ifdef DM_GLFW_VERSION_3
+    #include <dmsdk/graphics/glfw/glfw3.h>
+    #include <graphics/glfw/glfw3native.h>
+#else
+    #include <dmsdk/graphics/glfw/glfw.h>
+    #include <graphics/glfw/glfw_native.h>
+#endif
 
 #include <dlib/log.h>
 #include "../vulkan/graphics_vulkan_defines.h"
@@ -110,7 +115,11 @@ namespace dmGraphics
     {
     }
 
+#ifdef DM_GLFW_VERSION_3
+    void OnWindowResize(GLFWwindow* window, int width, int height)
+#else
     void OnWindowResize(int width, int height)
+#endif
     {
         assert(g_VulkanContext);
         g_VulkanContext->m_WindowWidth  = (uint32_t)width;
@@ -124,17 +133,28 @@ namespace dmGraphics
         }
     }
 
+#ifdef DM_GLFW_VERSION_3
+    void OnWindowClose(GLFWwindow* window)
+#else
     int OnWindowClose()
+#endif
     {
         assert(g_VulkanContext);
         if (g_VulkanContext->m_WindowCloseCallback != 0x0)
         {
             return g_VulkanContext->m_WindowCloseCallback(g_VulkanContext->m_WindowCloseCallbackUserData);
         }
+
+    #ifndef DM_GLFW_VERSION_3
         return 1;
+    #endif
     }
 
+#ifdef DM_GLFW_VERSION_3
+    void OnWindowFocus(GLFWwindow* window, int focus)
+#else
     void OnWindowFocus(int focus)
+#endif
     {
         assert(g_VulkanContext);
         if (g_VulkanContext->m_WindowFocusCallback != 0x0)
@@ -145,6 +165,10 @@ namespace dmGraphics
 
     uint32_t VulkanGetWindowRefreshRate(HContext _context)
     {
+    #ifdef DM_GLFW_VERSION_3
+        // Doesn't exist
+        return 0;
+    #else
         if (((VulkanContext*) _context)->m_WindowOpened)
         {
             return glfwGetWindowRefreshRate();
@@ -153,6 +177,7 @@ namespace dmGraphics
         {
             return 0;
         }
+    #endif
     }
 
     WindowResult VulkanOpenWindow(HContext _context, WindowParams* params)
@@ -160,6 +185,16 @@ namespace dmGraphics
         VulkanContext* context = (VulkanContext*) _context;
         assert(context->m_WindowSurface == VK_NULL_HANDLE);
 
+    #ifdef DM_GLFW_VERSION_3
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        glfwWindowHint(GLFW_SAMPLES,    params->m_Samples);
+
+        GLFWwindow* window = glfwCreateWindow(params->m_Width, params->m_Height, params->m_Title, glfwGetPrimaryMonitor(), NULL);
+        if (!window)
+        {
+            return WINDOW_RESULT_WINDOW_OPEN_ERROR;
+        }
+    #else
         glfwOpenWindowHint(GLFW_CLIENT_API,   GLFW_NO_API);
         glfwOpenWindowHint(GLFW_FSAA_SAMPLES, params->m_Samples);
 
@@ -169,21 +204,30 @@ namespace dmGraphics
         {
             return WINDOW_RESULT_WINDOW_OPEN_ERROR;
         }
+    #endif
 
         if (!InitializeVulkan(context, params))
         {
             return WINDOW_RESULT_WINDOW_OPEN_ERROR;
         }
 
-    #if !defined(__EMSCRIPTEN__)
-        glfwSetWindowTitle(params->m_Title);
-    #endif
+    #ifdef DM_GLFW_VERSION_3
+
+        glfwSetWindowSizeCallback(window,  OnWindowResize);
+        glfwSetWindowCloseCallback(window, OnWindowClose);
+        glfwSetWindowFocusCallback(window, OnWindowFocus);
+
+    #else
+        #if !defined(__EMSCRIPTEN__)
+            glfwSetWindowTitle(params->m_Title);
+        #endif
 
         glfwSetWindowBackgroundColor(params->m_BackgroundColor);
 
         glfwSetWindowSizeCallback(OnWindowResize);
         glfwSetWindowCloseCallback(OnWindowClose);
         glfwSetWindowFocusCallback(OnWindowFocus);
+    #endif
 
         context->m_WindowOpened                  = 1;
         context->m_Width                         = params->m_Width;

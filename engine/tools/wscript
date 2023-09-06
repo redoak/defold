@@ -47,13 +47,18 @@ def configure(conf):
     elif re.match('arm.*?android', platform):
         conf.env.append_value('LINKFLAGS', ['-lEGL', '-lGLESv1_CM', '-lGLESv2', '-landroid'])
 
+    glfw = "glfw"
+
+    if platform in 'arm64-macos':
+        glfw = "glfw3"
+
     conf.env.append_value('INCLUDES', "default/src")
     conf.env['STLIB_DLIB'] = ['dlib', 'mbedtls', 'zip']
     conf.env['STLIB_DDF'] = 'ddf'
     conf.env['STLIB_HID'] = 'hid'
     conf.env['STLIB_TEXC'] = ['texc', 'basis_encoder']
     conf.env['STLIB_INPUT'] = 'input'
-    conf.env['STLIB_DMGLFW'] = 'dmglfw'
+    conf.env['STLIB_DMGLFW'] = glfw
     conf.env['STLIB_GRAPHICS'] = 'graphics'
     conf.env['STLIB_GRAPHICS_VULKAN'] = ['graphics_vulkan']
     conf.env['STLIB_GRAPHICS_PS4'] = ['graphics_ps4']

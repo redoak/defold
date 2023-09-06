@@ -1755,7 +1755,12 @@ def detect(conf):
     conf.env['STLIB_GRAPHICS_VULKAN']   = ['graphics_vulkan', 'graphics_transcoder_basisu', 'basis_transcoder']
     conf.env['STLIB_GRAPHICS_NULL']     = ['graphics_null', 'graphics_transcoder_null']
 
-    conf.env['STLIB_DMGLFW'] = 'dmglfw'
+    glfw = "dmglfw"
+    if platform in ('arm64-macos'):
+        glfw = "glfw3"
+        conf.env.append_unique('DEFINES', 'DM_GLFW_VERSION_3')
+
+    conf.env['STLIB_DMGLFW'] = glfw
 
     if platform in ('x86_64-macos','arm64-macos'):
         vulkan_validation = os.environ.get('DM_VULKAN_VALIDATION',None)
