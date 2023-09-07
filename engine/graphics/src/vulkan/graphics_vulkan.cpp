@@ -1101,7 +1101,7 @@ bail:
             if (res == VK_ERROR_OUT_OF_DATE_KHR)
             {
                 uint32_t width, height;
-                VulkanGetNativeWindowSize(&width, &height);
+                VulkanGetNativeWindowSize(_context, &width, &height);
                 context->m_WindowWidth  = width;
                 context->m_WindowHeight = height;
                 SwapChainChanged(context, &context->m_WindowWidth, &context->m_WindowHeight, 0, 0);

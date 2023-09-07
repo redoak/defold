@@ -12,17 +12,25 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
+#include <dmsdk/dlib/math.h>
+#include <dlib/log.h>
+#include "../vulkan/graphics_vulkan_defines.h"
+#include "../vulkan/graphics_vulkan_private.h"
+
 #ifdef DM_GLFW_VERSION_3
+    #define GLFW_INCLUDE_GLCOREARB
+    #define GLFW_INCLUDE_GLEXT
     #include <dmsdk/graphics/glfw/glfw3.h>
     #include <graphics/glfw/glfw3native.h>
+
+    static inline GLFWwindow* GetWindowHandle(dmGraphics::HContext context)
+    {
+        return (GLFWwindow*) ((dmGraphics::VulkanContext*) context)->m_WindowHandle;
+    }
 #else
     #include <dmsdk/graphics/glfw/glfw.h>
     #include <graphics/glfw/glfw_native.h>
 #endif
-
-#include <dlib/log.h>
-#include "../vulkan/graphics_vulkan_defines.h"
-#include "../vulkan/graphics_vulkan_private.h"
 
 /*****************************************************************************************************************
  * JG: When we update to newer MVK we need to do these changes to get validation layers to work (for MVK at least):
@@ -135,20 +143,24 @@ namespace dmGraphics
 
 #ifdef DM_GLFW_VERSION_3
     void OnWindowClose(GLFWwindow* window)
+    {
+        assert(g_VulkanContext);
+        if (g_VulkanContext->m_WindowCloseCallback != 0x0)
+        {
+            g_VulkanContext->m_WindowCloseCallback(g_VulkanContext->m_WindowCloseCallbackUserData);
+        }
+    }
 #else
     int OnWindowClose()
-#endif
     {
         assert(g_VulkanContext);
         if (g_VulkanContext->m_WindowCloseCallback != 0x0)
         {
             return g_VulkanContext->m_WindowCloseCallback(g_VulkanContext->m_WindowCloseCallbackUserData);
         }
-
-    #ifndef DM_GLFW_VERSION_3
         return 1;
-    #endif
     }
+#endif
 
 #ifdef DM_GLFW_VERSION_3
     void OnWindowFocus(GLFWwindow* window, int focus)
@@ -217,6 +229,8 @@ namespace dmGraphics
         glfwSetWindowCloseCallback(window, OnWindowClose);
         glfwSetWindowFocusCallback(window, OnWindowFocus);
 
+        context->m_WindowHandle = (void*) window;
+
     #else
         #if !defined(__EMSCRIPTEN__)
             glfwSetWindowTitle(params->m_Title);
@@ -256,7 +270,11 @@ namespace dmGraphics
 
             SynchronizeDevice(vk_device);
 
+        #ifdef DM_GLFW_VERSION_3
+            glfwDestroyWindow((GLFWwindow*) context->m_WindowHandle);
+        #else
             glfwCloseWindow();
+        #endif
 
             VulkanDestroyResources(context);
 
@@ -276,11 +294,17 @@ namespace dmGraphics
         }
     }
 
-    void VulkanIconifyWindow(HContext context)
+    void VulkanIconifyWindow(HContext _context)
     {
-        if (((VulkanContext*) context)->m_WindowOpened)
+        VulkanContext* context = (VulkanContext*) _context;
+
+        if (context->m_WindowOpened)
         {
+        #ifdef DM_GLFW_VERSION_3
+            glfwIconifyWindow(GetWindowHandle(_context));
+        #else
             glfwIconifyWindow();
+        #endif
         }
     }
 
@@ -288,7 +312,11 @@ namespace dmGraphics
     {
         if (((VulkanContext*) context)->m_WindowOpened)
         {
+        #ifdef DM_GLFW_VERSION_3
+            return glfwGetWindowAttrib(GetWindowHandle(context), state);
+        #else
             return glfwGetWindowParam(state);
+        #endif
         }
         else
         {
@@ -323,13 +351,23 @@ namespace dmGraphics
 
     float VulkanGetDisplayScaleFactor(HContext context)
     {
+    #ifdef DM_GLFW_VERSION_3
+        float xscale, yscale;
+        glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &xscale, &yscale);
+        return dmMath::Max(xscale, yscale);
+    #else
         return glfwGetDisplayScaleFactor();
+    #endif
     }
 
-    void VulkanGetNativeWindowSize(uint32_t* width, uint32_t* height)
+    void VulkanGetNativeWindowSize(HContext context, uint32_t* width, uint32_t* height)
     {
         int w, h;
+    #ifdef DM_GLFW_VERSION_3
+        glfwGetWindowSize(GetWindowHandle(context), &w, &h);
+    #else
         glfwGetWindowSize(&w, &h);
+    #endif
         *width = w;
         *height = h;
     }
@@ -342,9 +380,17 @@ namespace dmGraphics
         {
             context->m_Width  = width;
             context->m_Height = height;
-            glfwSetWindowSize((int)width, (int)height);
+
             int window_width, window_height;
+
+        #ifdef DM_GLFW_VERSION_3
+            glfwSetWindowSize(GetWindowHandle(_context), (int)width, (int)height);
+            glfwGetWindowSize(GetWindowHandle(_context), &window_width, &window_height);
+        #else
+            glfwSetWindowSize((int)width, (int)height);
             glfwGetWindowSize(&window_width, &window_height);
+        #endif
+
             context->m_WindowWidth  = window_width;
             context->m_WindowHeight = window_height;
 

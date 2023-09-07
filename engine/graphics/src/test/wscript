@@ -17,9 +17,13 @@ def build(bld):
         if bld.env.PLATFORM in ('armv7-android', 'arm64-android'):
             extra_libs += ['OPENGL']
 
+        #if bld.env.PLATFORM in ('arm64-macos'):
+
         bld.program(features = 'cxx cprogram test skip_test',
                     includes = ['../../src', '../../proto'],
-                    exported_symbols = ['GraphicsAdapterVulkan'],
+                    #exported_symbols = ['GraphicsAdapterVulkan'],
+                    exported_symbols = ['GraphicsAdapterOpenGL'],
                     source = 'test_app_vulkan.cpp',
-                    use = 'TESTMAIN APP DDF DLIB DMGLFW PROFILE GRAPHICS_VULKAN VULKAN graphics_vulkan graphics_transcoder_basisu'.split() + extra_libs,
+                    #use = 'TESTMAIN APP DDF DLIB DMGLFW PROFILE GRAPHICS_VULKAN VULKAN graphics_vulkan graphics_transcoder_basisu'.split() + extra_libs,
+                    use = 'TESTMAIN APP DDF DLIB DMGLFW PROFILE GRAPHICS OPENGL graphics_transcoder_basisu'.split() + extra_libs,
                     target = 'test_app_vulkan')

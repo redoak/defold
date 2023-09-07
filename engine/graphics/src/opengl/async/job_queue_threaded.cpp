@@ -19,7 +19,15 @@
 #include <dlib/condition_variable.h>
 #include <dlib/array.h>
 
-#include <dmsdk/graphics/glfw/glfw.h>
+#ifdef DM_GLFW_VERSION_3
+    #define GLFW_INCLUDE_GLCOREARB
+    #define GLFW_INCLUDE_GLEXT
+    #include <dmsdk/graphics/glfw/glfw3.h>
+    #include <graphics/glfw/glfw3native.h>
+#else
+    #include <dmsdk/graphics/glfw/glfw.h>
+    #include <graphics/glfw/glfw_native.h>
+#endif
 
 #include "job_queue.h"
 
@@ -49,7 +57,8 @@ namespace dmGraphics
 
     static void AsyncThread(void* args)
     {
-        void* aux_context = glfwAcquireAuxContext();
+        // void* aux_context = glfwAcquireAuxContext();
+
         JobDesc job;
         while (m_Active)
         {
@@ -65,7 +74,8 @@ namespace dmGraphics
             }
             ProcessJob(job);
         }
-        glfwUnacquireAuxContext(aux_context);
+
+        // glfwUnacquireAuxContext(aux_context);
     }
 
     void JobQueuePush(const JobDesc& job)
@@ -92,11 +102,17 @@ namespace dmGraphics
     {
         dmLogDebug("AsyncInitialize: Initializing auxillary context..");
         assert(m_JobThread == 0x0);
+
+        // TODO ALERT
+        return;
+
+        /*
         if(!glfwQueryAuxContext())
         {
             dmLogDebug("AsyncInitialize: Auxillary context unsupported");
             return;
         }
+        */
         m_JobQueue.SetCapacity(m_JobQueueSizeIncrement);
         m_JobQueue.SetSize(0);
         m_ConsumerThreadMutex = dmMutex::New();

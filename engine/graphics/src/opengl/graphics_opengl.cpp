@@ -43,8 +43,47 @@
 #include <Carbon/Carbon.h>
 #endif
 
-#include <dmsdk/graphics/glfw/glfw.h>
-#include <graphics/glfw/glfw_native.h>
+#ifdef DM_GLFW_VERSION_3
+    #define GLFW_INCLUDE_GLCOREARB
+    #define GLFW_INCLUDE_GLEXT
+    #include <dmsdk/graphics/glfw/glfw3.h>
+    #include <graphics/glfw/glfw3native.h>
+
+    #define GET_DEFAULT_FRAMEBUFFER_ID() (0)
+
+    static inline GLFWwindow* GetWindowHandle(dmGraphics::HContext context)
+    {
+        return (GLFWwindow*) ((dmGraphics::OpenGLContext*) context)->m_WindowHandle;
+    }
+
+    // Compat
+    #define glDeleteBuffersARB          glDeleteBuffers
+    #define glBindBufferARB             glBindBuffer
+    #define glBufferDataARB             glBufferData
+    #define glBufferSubDataARB          glBufferSubData
+    #define glGenBuffersARB             glGenBuffers
+    #define GL_ARRAY_BUFFER_ARB         GL_ARRAY_BUFFER
+    #define GL_ELEMENT_ARRAY_BUFFER_ARB GL_ELEMENT_ARRAY_BUFFER
+
+    /*
+    #define glClearDepth glClearDepthf
+    #define glGenBuffersARB glGenBuffers
+    #define glDeleteBuffersARB glDeleteBuffers
+    #define glBindBufferARB glBindBuffer
+    #define glBufferDataARB glBufferData
+    #define glBufferSubDataARB glBufferSubData
+    #define glMapBufferARB glMapBufferOES
+    #define glUnmapBufferARB glUnmapBufferOES
+    #define GL_ARRAY_BUFFER_ARB GL_ARRAY_BUFFER
+    #define GL_ELEMENT_ARRAY_BUFFER_ARB GL_ELEMENT_ARRAY_BUFFER
+    #define GL_TEXTURE_CUBE_MAP_SEAMLESS 0x884F
+    */
+#else
+    #include <dmsdk/graphics/glfw/glfw.h>
+    #include <graphics/glfw/glfw_native.h>
+
+    #define GET_DEFAULT_FRAMEBUFFER_ID() (glfwGetDefaultFramebuffer())
+#endif
 
 #if defined(__linux__) && !defined(ANDROID)
     #include <GL/glext.h>
@@ -187,10 +226,12 @@ namespace dmGraphics
 
 static void LogGLError(GLint err, const char* fnname, int line)
 {
-#if defined(GL_ES_VERSION_2_0)
     const char* error_str = "<unknown-gl-error>";
     switch(err)
     {
+        case GL_NO_ERROR:
+            error_str = "GL_NO_ERROR";
+            break;
         case GL_INVALID_ENUM:
             error_str = "GL_INVALID_ENUM";
             break;
@@ -200,12 +241,12 @@ static void LogGLError(GLint err, const char* fnname, int line)
         case GL_INVALID_OPERATION:
             error_str = "GL_INVALID_OPERATION";
             break;
+        case GL_OUT_OF_MEMORY:
+            error_str = "GL_OUT_OF_MEMORY";
+            break;
         default:break;
     }
     dmLogError("%s(%d): gl error %d: %s\n", fnname, line, err, error_str);
-#else
-    dmLogError("%s(%d): gl error %d: %s\n", fnname, line, err, gluErrorString(err));
-#endif
 }
 
 // We use defines here so that we get a callstack from the correct function
@@ -430,7 +471,7 @@ static void LogFrameBufferError(GLenum status)
             GL_DEPTH_TEST,
             GL_SCISSOR_TEST,
             GL_STENCIL_TEST,
-        #if !defined(GL_ES_VERSION_2_0)
+        #if !defined(GL_ES_VERSION_2_0) && !defined(DM_GLFW_VERSION_3)
             GL_ALPHA_TEST,
         #else
             0x0BC0,
@@ -737,7 +778,7 @@ static void LogFrameBufferError(GLenum status)
 
             glBindTexture(GL_TEXTURE_2D, 0);
             CHECK_GL_ERROR;
-            glBindFramebuffer(GL_FRAMEBUFFER, glfwGetDefaultFramebuffer());
+            glBindFramebuffer(GL_FRAMEBUFFER, GET_DEFAULT_FRAMEBUFFER_ID());
             CHECK_GL_ERROR;
             glDeleteFramebuffers(1, &osfb);
             DeleteTexture(texture_handle);
@@ -780,30 +821,36 @@ static void LogFrameBufferError(GLenum status)
         assert(params);
 
         OpenGLContext* context = (OpenGLContext*) _context;
-        if (context->m_WindowOpened) return WINDOW_RESULT_ALREADY_OPENED;
-
-        if (params->m_HighDPI) {
-            glfwOpenWindowHint(GLFW_WINDOW_HIGH_DPI, 1);
+        if (context->m_WindowOpened)
+        {
+            return WINDOW_RESULT_ALREADY_OPENED;
         }
 
-        glfwOpenWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
-        glfwOpenWindowHint(GLFW_FSAA_SAMPLES, params->m_Samples);
+    #ifdef DM_GLFW_VERSION_3
+        #define dmGlfwWindowHint glfwWindowHint
+    #else
+        #define dmGlfwWindowHint glfwOpenWindowHint
+    #endif
+
+        dmGlfwWindowHint(GLFW_SCALE_TO_MONITOR, params->m_HighDPI);
+        dmGlfwWindowHint(GLFW_CLIENT_API,       GLFW_OPENGL_API);
+        dmGlfwWindowHint(GLFW_SAMPLES,          params->m_Samples);
 
 #if defined(ANDROID)
         // Seems to work fine anyway without any hints
         // which is good, since we want to fallback from OpenGLES 3 to 2
 #elif defined(__linux__)
-        glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 3);
-        glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 3);
+        dmGlfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        dmGlfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 #elif defined(_WIN32)
-        glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 3);
-        glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 3);
+        dmGlfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        dmGlfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 #elif defined(__MACH__)
-        glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 3);
+        dmGlfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     #if defined(DM_PLATFORM_IOS)
-        glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 0); // 3.0 on iOS
+        dmGlfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0); // 3.0 on iOS
     #else
-        glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 2); // 3.2 on macOS (actually picks 4.1 anyways)
+        dmGlfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2); // 3.2 on macOS (actually picks 4.1 anyways)
     #endif
 #endif
 
@@ -812,14 +859,25 @@ static void LogFrameBufferError(GLenum status)
         is_desktop = true;
 #endif
         if (is_desktop) {
-            glfwOpenWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-            glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+            dmGlfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+            dmGlfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         }
 
+        bool windowOpened = false;
+    #ifdef DM_GLFW_VERSION_3
+        GLFWwindow* window = glfwCreateWindow(params->m_Width, params->m_Height, params->m_Title, NULL /*glfwGetPrimaryMonitor()*/, NULL);
+        windowOpened = window != 0;
+
+        context->m_WindowHandle = window;
+    #else
         int mode = GLFW_WINDOW;
         if (params->m_Fullscreen)
             mode = GLFW_FULLSCREEN;
-        if (!glfwOpenWindow(params->m_Width, params->m_Height, 8, 8, 8, 8, 32, 8, mode))
+
+        windowOpened = (bool) glfwOpenWindow(params->m_Width, params->m_Height, 8, 8, 8, 8, 32, 8, mode);
+    #endif
+
+        if (!windowOpened)
         {
             if (is_desktop)
             {
@@ -827,19 +885,30 @@ static void LogFrameBufferError(GLenum status)
 
                 // Try a second time, this time without core profile, and lower the minor version.
                 // And GLFW clears hints, so we have to set them again.
-                if (params->m_HighDPI) {
-                    glfwOpenWindowHint(GLFW_WINDOW_HIGH_DPI, 1);
+                if (params->m_HighDPI)
+                {
+                    assert(0);
+                    // dmGlfwWindowHint(GLFW_WINDOW_HIGH_DPI, 1);
                 }
-                glfwOpenWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
-                glfwOpenWindowHint(GLFW_FSAA_SAMPLES, params->m_Samples);
+
+                dmGlfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+                dmGlfwWindowHint(GLFW_SAMPLES, params->m_Samples);
 
                 // We currently cannot go lower since we support shader model 140
-                glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 3);
-                glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 1);
+                dmGlfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+                dmGlfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 
-                glfwOpenWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+                dmGlfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
-                if (!glfwOpenWindow(params->m_Width, params->m_Height, 8, 8, 8, 8, 32, 8, mode))
+            #ifdef DM_GLFW_VERSION_3
+                window = glfwCreateWindow(params->m_Width, params->m_Height, params->m_Title, NULL /*glfwGetPrimaryMonitor()*/, NULL);
+                windowOpened = window != 0;
+                context->m_WindowHandle = window;
+            #else
+                windowOpened = glfwOpenWindow(params->m_Width, params->m_Height, 8, 8, 8, 8, 32, 8, mode);
+            #endif
+
+                if (!windowOpened)
                 {
                     return WINDOW_RESULT_WINDOW_OPEN_ERROR;
                 }
@@ -849,6 +918,10 @@ static void LogFrameBufferError(GLenum status)
                 return WINDOW_RESULT_WINDOW_OPEN_ERROR;
             }
         }
+
+    #ifdef DM_GLFW_VERSION_3
+        glfwMakeContextCurrent(window);
+    #endif
 
 #if defined (_WIN32)
 #define GET_PROC_ADDRESS(function, name, type)\
@@ -934,16 +1007,30 @@ static void LogFrameBufferError(GLenum status)
 #undef GET_PROC_ADDRESS
 #endif
 
-#if !defined(__EMSCRIPTEN__)
-        glfwSetWindowTitle(params->m_Title);
-#endif
+        int width, height;
+
+    #ifdef DM_GLFW_VERSION_3
+        glfwSetWindowTitle(window, params->m_Title);
+        // glfwSetWindowSizeCallback(window, OnWindowResize);
+        // glfwSetWindowCloseCallback(window, OnWindowClose);
+        // glfwSetWindowFocusCallback(window, OnWindowFocus);
+        // glfwSetWindowIconifyCallback(window, OnWindowIconify);
+
+        glfwGetWindowSize(window, &width, &height);
+    #else
+        #if !defined(__EMSCRIPTEN__)
+            glfwSetWindowTitle(params->m_Title);
+        #endif
 
         glfwSetWindowBackgroundColor(params->m_BackgroundColor);
-
         glfwSetWindowSizeCallback(OnWindowResize);
         glfwSetWindowCloseCallback(OnWindowClose);
         glfwSetWindowFocusCallback(OnWindowFocus);
         glfwSetWindowIconifyCallback(OnWindowIconify);
+
+        glfwGetWindowSize(&width, &height);
+    #endif
+
         glfwSwapInterval(1);
         CHECK_GL_ERROR;
 
@@ -959,10 +1046,6 @@ static void LogFrameBufferError(GLenum status)
 
         context->m_Width                          = params->m_Width;
         context->m_Height                         = params->m_Height;
-
-        // read back actual window size
-        int width, height;
-        glfwGetWindowSize(&width, &height);
 
         context->m_WindowWidth    = (uint32_t) width;
         context->m_WindowHeight   = (uint32_t) height;
@@ -1217,14 +1300,21 @@ static void LogFrameBufferError(GLenum status)
         {
             context->m_PackedDepthStencilSupport = 1;
         }
+
+
+    #ifdef DM_GLFW_VERSION_3
+        context->m_DepthBufferBits = 24;
+    #else
         GLint depth_buffer_bits;
         glGetIntegerv( GL_DEPTH_BITS, &depth_buffer_bits );
+
         if (GL_INVALID_ENUM == glGetError())
         {
             depth_buffer_bits = 24;
         }
 
         context->m_DepthBufferBits = (uint32_t) depth_buffer_bits;
+    #endif
 #endif
 
         GLint gl_max_texture_size = 1024;
@@ -1305,6 +1395,9 @@ static void LogFrameBufferError(GLenum status)
             OpenGLPrintDeviceInfo(context);
         }
 
+        // TODO: Pass in aux window for GLFW3
+        // GLFWwindow* window = glfwCreateWindow(params->m_Width, params->m_Height, params->m_Title, NULL, ->window<-);
+
         JobQueueInitialize();
         if(JobQueueIsAsync())
         {
@@ -1334,7 +1427,13 @@ static void LogFrameBufferError(GLenum status)
         {
             JobQueueFinalize();
             PostDeleteTextures(true);
+
+        #ifdef DM_GLFW_VERSION_3
+            glfwDestroyWindow(GetWindowHandle(_context));
+        #else
             glfwCloseWindow();
+        #endif
+
             context->m_WindowResizeCallback = 0x0;
             context->m_Width = 0;
             context->m_Height = 0;
@@ -1352,7 +1451,11 @@ static void LogFrameBufferError(GLenum status)
         assert(context);
         if (((OpenGLContext*) context)->m_WindowOpened)
         {
+        #ifdef DM_GLFW_VERSION_3
+            glfwIconifyWindow(GetWindowHandle(context));
+        #else
             glfwIconifyWindow();
+        #endif
         }
     }
 
@@ -1376,7 +1479,13 @@ static void LogFrameBufferError(GLenum status)
     {
         assert(context);
         if (((OpenGLContext*) context)->m_WindowOpened)
+        {
+        #ifdef DM_GLFW_VERSION_3
+            return glfwGetWindowAttrib(GetWindowHandle(context), state);
+        #else
             return glfwGetWindowParam(state);
+        #endif
+        }
         else
             return 0;
     }
@@ -1384,10 +1493,14 @@ static void LogFrameBufferError(GLenum status)
     static uint32_t OpenGLGetWindowRefreshRate(HContext context)
     {
         assert(context);
+    #ifdef DM_GLFW_VERSION_3
+        return 0;
+    #else
         if (((OpenGLContext*) context)->m_WindowOpened)
             return glfwGetWindowRefreshRate();
         else
             return 0;
+    #endif
     }
 
     static PipelineState OpenGLGetPipelineState(HContext context)
@@ -1422,7 +1535,13 @@ static void LogFrameBufferError(GLenum status)
     static float OpenGLGetDisplayScaleFactor(HContext context)
     {
         assert(context);
+    #ifdef DM_GLFW_VERSION_3
+        float xscale, yscale;
+        glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &xscale, &yscale);
+        return dmMath::Max(xscale, yscale);
+    #else
         return glfwGetDisplayScaleFactor();
+    #endif
     }
 
     static uint32_t OpenGLGetWindowHeight(HContext context)
@@ -1439,9 +1558,16 @@ static void LogFrameBufferError(GLenum status)
         {
             context->m_Width = width;
             context->m_Height = height;
-            glfwSetWindowSize((int)width, (int)height);
+
             int window_width, window_height;
+        #ifdef DM_GLFW_VERSION_3
+            glfwSetWindowSize(GetWindowHandle(_context), (int)width, (int)height);
+            glfwGetWindowSize(GetWindowHandle(_context), &window_width, &window_height);
+        #else
+            glfwSetWindowSize((int)width, (int)height);
             glfwGetWindowSize(&window_width, &window_height);
+        #endif
+
             context->m_WindowWidth = window_width;
             context->m_WindowHeight = window_height;
             // The callback is not called from glfw when the size is set manually
@@ -1457,7 +1583,11 @@ static void LogFrameBufferError(GLenum status)
         assert(context);
         if (((OpenGLContext*) context)->m_WindowOpened)
         {
+        #ifdef DM_GLFW_VERSION_3
+            glfwSetWindowSize(GetWindowHandle(context), (int)width, (int)height);
+        #else
             glfwSetWindowSize((int)width, (int)height);
+        #endif
         }
     }
 
@@ -1505,7 +1635,12 @@ static void LogFrameBufferError(GLenum status)
     {
         DM_PROFILE(__FUNCTION__);
         PostDeleteTextures(false);
+    #ifdef DM_GLFW_VERSION_3
+        glfwSwapBuffers(GetWindowHandle(context));
+        glfwPollEvents();
+    #else
         glfwSwapBuffers();
+    #endif
         CHECK_GL_ERROR;
     }
 
@@ -2614,7 +2749,7 @@ static void LogFrameBufferError(GLenum status)
         }
 
         CHECK_GL_FRAMEBUFFER_ERROR;
-        glBindFramebuffer(GL_FRAMEBUFFER, glfwGetDefaultFramebuffer());
+        glBindFramebuffer(GL_FRAMEBUFFER, GET_DEFAULT_FRAMEBUFFER_ID());
         CHECK_GL_ERROR;
 
         return StoreAssetInContainer(context->m_AssetHandleContainer, rt, ASSET_TYPE_RENDER_TARGET);
@@ -2697,7 +2832,7 @@ static void LogFrameBufferError(GLenum status)
             context->m_FrameBufferInvalidateAttachments = rt != NULL;
 #endif
         }
-        glBindFramebuffer(GL_FRAMEBUFFER, rt == NULL ? glfwGetDefaultFramebuffer() : rt->m_Id);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt == NULL ? GET_DEFAULT_FRAMEBUFFER_ID() : rt->m_Id);
         CHECK_GL_ERROR;
 
     #if __EMSCRIPTEN__

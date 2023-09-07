@@ -160,8 +160,8 @@ static void* EngineCreate(int argc, char** argv)
     window_params.m_FocusCallbackUserData = 0;
     window_params.m_IconifyCallback = 0;
     window_params.m_IconifyCallbackUserData = 0;
-    window_params.m_Width = 0;
-    window_params.m_Height = 0;
+    window_params.m_Width = 512;
+    window_params.m_Height = 512;
     window_params.m_Samples = 0;
     window_params.m_Title = "TestTitle!";
     window_params.m_Fullscreen = 1;
@@ -190,8 +190,9 @@ static UpdateResult EngineUpdate(void* _engine)
     engine->m_WasRun++;
     uint64_t t = dmTime::GetTime();
     float elapsed = (t - engine->m_TimeStart) / 1000000.0f;
-    if (elapsed > 3.0f)
-        return RESULT_EXIT;
+
+    // if (elapsed > 3.0f)
+    //     return RESULT_EXIT;
 
     static uint8_t color_r = 0;
     static uint8_t color_g = 80;

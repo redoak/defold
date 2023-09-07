@@ -78,6 +78,7 @@ namespace dmGraphics
 
         dmOpaqueHandleContainer<uintptr_t> m_AssetHandleContainer;
 
+        void*                   m_WindowHandle;
         WindowResizeCallback    m_WindowResizeCallback;
         void*                   m_WindowResizeCallbackUserData;
         WindowCloseCallback     m_WindowCloseCallback;

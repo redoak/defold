@@ -360,7 +360,9 @@ namespace dmGraphics
         dmArray<TextureSampler>         m_TextureSamplers;
         uint32_t*                       m_DynamicOffsetBuffer;
         uint16_t                        m_DynamicOffsetBufferSize;
-        // Window callbacks
+
+        // Window
+        void*                           m_WindowHandle;
         WindowResizeCallback            m_WindowResizeCallback;
         void*                           m_WindowResizeCallbackUserData;
         WindowCloseCallback             m_WindowCloseCallback;
@@ -518,7 +520,7 @@ namespace dmGraphics
     void         VulkanSetWindowSize(HContext context, uint32_t width, uint32_t height);
     void         VulkanResizeWindow(HContext context, uint32_t width, uint32_t height);
     void         VulkanSetWindowSize(HContext context, uint32_t width, uint32_t height);
-    void         VulkanGetNativeWindowSize(uint32_t* width, uint32_t* height);
+    void         VulkanGetNativeWindowSize(HContext context, uint32_t* width, uint32_t* height);
     void         VulkanIconifyWindow(HContext context);
     uint32_t     VulkanGetWindowState(HContext context, WindowState state);
 }
