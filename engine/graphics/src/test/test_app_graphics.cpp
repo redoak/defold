@@ -198,7 +198,7 @@ struct CopyToBufferTest : ITest
         dmGraphics::TextureParams copy_params = {};
         copy_params.m_Width                   = dmGraphics::GetTextureWidth(m_CopyBufferToTextureTexture);
         copy_params.m_Height                  = dmGraphics::GetTextureHeight(m_CopyBufferToTextureTexture);
-        dmGraphics::VulkanCopyBufferToTexture(engine->m_GraphicsContext, m_CopyBufferToTextureBuffer, m_CopyBufferToTextureTexture, copy_params);
+        dmGraphics::VulkanCopyBufferToTexture(engine->m_GraphicsContext, m_CopyBufferToTextureBuffer, m_CopyBufferToTextureTexture, &copy_params);
     }
 };
 

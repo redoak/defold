@@ -114,6 +114,29 @@ namespace dmGraphics
     const uint32_t INVALID_STREAM_OFFSET = 0xFFFFFFFF;
 
     /*#
+     * Max color buffer count
+     * @constant
+     * @name MAX_BUFFER_COLOR_ATTACHMENTS
+     */
+    const uint8_t MAX_BUFFER_COLOR_ATTACHMENTS = 4;
+
+    /*#
+     * @enum
+     * @name AttachmentOp
+     * @member ATTACHMENT_OP_DONT_CARE
+     * @member ATTACHMENT_OP_LOAD
+     * @member ATTACHMENT_OP_STORE
+     * @member ATTACHMENT_OP_CLEAR
+     */
+    enum AttachmentOp
+    {
+        ATTACHMENT_OP_DONT_CARE = 0,
+        ATTACHMENT_OP_LOAD      = 1,
+        ATTACHMENT_OP_STORE     = 2,
+        ATTACHMENT_OP_CLEAR     = 3,
+    };
+
+    /*#
      * @enum
      * @name HandleResult
      * @member HANDLE_RESULT_OK

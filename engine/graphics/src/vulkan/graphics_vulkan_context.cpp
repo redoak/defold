@@ -199,10 +199,12 @@ namespace dmGraphics
         vk_application_info.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
         vk_application_info.apiVersion         = VK_API_VERSION_1_0;
 
+        /*
         // Required for interlock features
     #ifdef DM_EXPERIMENTAL_GRAPHICS_FEATURES
         vk_application_info.apiVersion = VK_API_VERSION_1_1;
     #endif
+    */
 
         vk_required_extensions.SetCapacity(extensionNameCount + validationLayerExtensionCount);
 
@@ -218,6 +220,8 @@ namespace dmGraphics
         // Static to keep life time while adding it to an array and passing it along
         static const char* VK_KHR_get_physical_device_properties2_str = "VK_KHR_get_physical_device_properties2";
         static const char* VK_KHR_portability_enumeration_str = "VK_KHR_portability_enumeration";
+
+        // VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
 
         if (validationLayerCount > 0)
         {

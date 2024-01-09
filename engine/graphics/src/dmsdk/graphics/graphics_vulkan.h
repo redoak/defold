@@ -15,11 +15,13 @@
 #ifndef DM_GRAPHICS_VULKAN_H
 #define DM_GRAPHICS_VULKAN_H
 
+#include <dmsdk/graphics/graphics.h>
+
 namespace dmGraphics
 {
-	static const uint32_t MAX_SUBPASSES             = 4;
+    static const uint32_t MAX_SUBPASSES             = 4;
     static const uint32_t MAX_SUBPASS_DEPENDENCIES  = 4;
-    static const uint8_t  SUBPASS_EXTERNAL 		    = -1;
+    static const uint8_t  SUBPASS_EXTERNAL          = -1;
     static const uint8_t  SUBPASS_ATTACHMENT_UNUSED = -1;
 
     enum VertexStepFunction
@@ -42,6 +44,9 @@ namespace dmGraphics
         ACCESS_FLAG_WRITE  = 2,
         ACCESS_FLAG_SHADER = 4,
     };
+
+    struct TextureParams;
+    struct PipelineState;
 
     struct RenderPassDependency
     {
@@ -69,6 +74,8 @@ namespace dmGraphics
 
     struct SetRenderTargetAttachmentsParams
     {
+        SetRenderTargetAttachmentsParams();
+
         HTexture     m_ColorAttachments[MAX_BUFFER_COLOR_ATTACHMENTS];
         AttachmentOp m_ColorAttachmentLoadOps[MAX_BUFFER_COLOR_ATTACHMENTS];
         AttachmentOp m_ColorAttachmentStoreOps[MAX_BUFFER_COLOR_ATTACHMENTS];
@@ -80,7 +87,7 @@ namespace dmGraphics
     };
 
     HContext VulkanGetContext();
-	void     VulkanCopyBufferToTexture(HContext context, HVertexBuffer buffer, HTexture texture, const TextureParams& params);
+    void     VulkanCopyBufferToTexture(HContext context, HVertexBuffer buffer, HTexture texture, const TextureParams* params);
     void     VulkanSetRenderTargetAttachments(HContext context, HRenderTarget render_target, const SetRenderTargetAttachmentsParams& params);
     void     VulkanSetConstantBuffer(HContext context, HVertexBuffer buffer, uint32_t buffer_offset, HUniformLocation base_location);
     HTexture VulkanGetActiveSwapChainTexture(HContext context);
@@ -92,10 +99,14 @@ namespace dmGraphics
     void     VulkanCreateRenderPass(HContext context, HRenderTarget render_target, const CreateRenderPassParams& params);
     void     VulkanNextRenderPass(HContext context, HRenderTarget render_target);
     void     VulkanSetFrameInFlightCount(HContext, uint8_t num_frames_in_flight);
-    void     VulkanSetPipelineState(HContext context, PipelineState ps);
+    void     VulkanSetPipelineState(HContext context, const PipelineState* ps);
     void     VulkanClearTexture(HContext context, HTexture texture, float values[4]);
     void     VulkanMemorybarrier(HContext context, HTexture _texture, uint32_t src_stage_flags, uint32_t dst_stage_flags, uint32_t src_access_flags, uint32_t dst_access_flags);
     void     VulkanGetUniformBinding(HContext context, HProgram program, uint32_t index, uint32_t* set, uint32_t* binding, uint32_t* member_index);
+    void*    VulkanMapVertexBuffer(HContext context, HVertexBuffer buffer, BufferAccess access);
+    bool     VulkanUnmapVertexBuffer(HContext context, HVertexBuffer buffer);
+    void*    VulkanMapIndexBuffer(HContext context, HIndexBuffer buffer, BufferAccess access);
+    bool     VulkanUnmapIndexBuffer(HContext context, HIndexBuffer buffer);
 }
 
 #endif
