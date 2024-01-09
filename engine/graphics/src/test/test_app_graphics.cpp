@@ -25,7 +25,7 @@
 
 #include "../graphics.h"
 #include "../graphics_private.h"
-#include "../vulkan/graphics_vulkan.h"
+#include <dmsdk/graphics/graphics_vulkan.h>
 
 #include "test_app_graphics_assets.h"
 
