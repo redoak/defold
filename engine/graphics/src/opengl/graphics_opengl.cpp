@@ -88,7 +88,6 @@
     typedef GLint (APIENTRY * PFNGLGETFRAGDATALOCATIONPROC) (GLuint, const char*);
     typedef void (APIENTRY * PFNGLBINDFRAGDATALOCATIONPROC) (GLuint, GLuint, const char*);
 
-    PFNGLGENPROGRAMARBPROC glGenProgramsARB = NULL;
     PFNGLBINDPROGRAMARBPROC glBindProgramARB = NULL;
     PFNGLDELETEPROGRAMSARBPROC glDeleteProgramsARB = NULL;
     PFNGLPROGRAMSTRINGARBPROC glProgramStringARB = NULL;
@@ -808,7 +807,6 @@ static void LogFrameBufferError(GLenum status)
             return false;\
         }
 
-        GET_PROC_ADDRESS(glGenProgramsARB, "glGenPrograms", PFNGLGENPROGRAMARBPROC);
         GET_PROC_ADDRESS(glBindProgramARB, "glBindProgram", PFNGLBINDPROGRAMARBPROC);
         GET_PROC_ADDRESS(glDeleteProgramsARB, "glDeletePrograms", PFNGLDELETEPROGRAMSARBPROC);
         GET_PROC_ADDRESS(glProgramStringARB, "glProgramString", PFNGLPROGRAMSTRINGARBPROC);
