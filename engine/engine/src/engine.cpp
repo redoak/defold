@@ -1652,7 +1652,8 @@ bail:
                 dmGameObject::Update(engine->m_MainCollection, &update_context);
 
                 // Don't render while iconified
-                if (!dmGraphics::GetWindowStateParam(engine->m_GraphicsContext, dmPlatform::WINDOW_STATE_ICONIFIED))
+                if (!dmGraphics::GetWindowStateParam(engine->m_GraphicsContext, dmPlatform::WINDOW_STATE_ICONIFIED)
+                    && !dmRender::IsRenderPaused(engine->m_RenderContext))
                 {
                     // Call pre render functions for extensions, if available.
                     // We do it here before we render rest of the frame

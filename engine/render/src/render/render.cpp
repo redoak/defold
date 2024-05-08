@@ -132,6 +132,8 @@ namespace dmRender
 
         context->m_MultiBufferingRequired = 0;
 
+        context->m_IsRenderPaused = 0;
+
         dmGraphics::AdapterFamily installed_adapter_family = dmGraphics::GetInstalledAdapterFamily();
         if (installed_adapter_family == dmGraphics::ADAPTER_FAMILY_VULKAN ||
             installed_adapter_family == dmGraphics::ADAPTER_FAMILY_VENDOR)
@@ -140,6 +142,8 @@ namespace dmRender
         }
 
         context->m_RenderListDispatch.SetCapacity(255);
+
+        SetupContextEventCallback(context, &OnContextEvent);
 
         dmMessage::Result r = dmMessage::NewSocket(RENDER_SOCKET_NAME, &context->m_Socket);
         assert(r == dmMessage::RESULT_OK);
@@ -1088,5 +1092,50 @@ namespace dmRender
         predicate->m_Tags[predicate->m_TagCount++] = tag;
         std::sort(predicate->m_Tags, predicate->m_Tags+predicate->m_TagCount);
         return RESULT_OK;
+    }
+
+    void SetupContextEventCallback(void* context, ContextEventCallback callback)
+    {
+        PlatformSetupContextEventCallback(context, callback);
+    }
+
+    void OnContextEvent(void* context, const char* event_name)
+    {
+        if (strcmp(event_name, "context_lost") == 0)
+        {
+            PauseRender(context);
+        }
+        RenderContext* render_context = (RenderContext*)context;
+        if (render_context->m_CallbackInfo != 0x0)
+        {
+            dmScript::LuaCallbackInfo* cbk = render_context->m_CallbackInfo;
+            if (!dmScript::IsCallbackValid(cbk))
+            {
+                return;
+            }
+            lua_State* L = dmScript::GetCallbackLuaContext(cbk);
+            DM_LUA_STACK_CHECK(L, 0);
+
+            if (!dmScript::SetupCallback(cbk))
+            {
+                return;
+            }
+            lua_pushstring(L, event_name);
+            int ret = dmScript::PCall(L, 2, 0);
+            (void)ret;
+            dmScript::TeardownCallback(cbk);
+        }
+    }
+
+    void PauseRender(void* context)
+    {
+        RenderContext* render_context = (RenderContext*)context;
+        render_context->m_IsRenderPaused = 1;
+    }
+
+    bool IsRenderPaused(void* context)
+    {
+        RenderContext* render_context = (RenderContext*)context;
+        return render_context->m_IsRenderPaused;
     }
 }
