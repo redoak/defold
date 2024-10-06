@@ -13,7 +13,7 @@ lua_lib_source = ['lapi.c', 'lcode.c', 'ldebug.c', 'ldo.c',
                   'lundump.c', 'lvm.c', 'lzio.c', 'lauxlib.c',
                   'lbaselib.c', 'ldblib.c', 'liolib.c',
                   'lmathlib.c', 'loslib.c', 'ltablib.c',
-                  'lstrlib.c', 'loadlib.c', 'linit.c']
+                  'lstrlib.c', 'loadlib.c', 'linit.c', 'lcoco.c']
 
 lua_lib = bld.stlib(features = 'c cxx',
                     name = 'lua_static',
