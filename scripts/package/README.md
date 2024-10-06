@@ -107,6 +107,7 @@ Run the script
 
 The installation of the HTML5 compiler is done by calling the build function `install_ems`:
 
+	$ ./scripts/package/package_emscripten.sh
 	$ ./scripts/build.py install_ems
 
 ## Linux

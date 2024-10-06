@@ -22,7 +22,7 @@ from BuildUtility import BuildUtility, BuildUtilityException, create_build_utili
 import sdk
 
 if not 'DYNAMO_HOME' in os.environ:
-    print ("You must define DYNAMO_HOME. Have you run './script/build.py shell' ?", file=sys.stderr)
+    print ("You must define DYNAMO_HOME. Have you run './scripts/build.py shell' ?", file=sys.stderr)
     sys.exit(1)
 
 def import_lib(module_name, path):
