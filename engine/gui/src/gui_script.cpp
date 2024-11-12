@@ -490,13 +490,13 @@ namespace dmGui
         Scene* scene = GuiScriptInstance_Check(L);
 
         HNode node = 0;
-        if (lua_isstring(L, 1))
+        const char* id_string = lua_tostring(L, 1);
+        if (id_string)
         {
-            const char* id = luaL_checkstring(L, 1);
-            node = GetNodeById(scene, id);
+            node = GetNodeById(scene, id_string);
             if (node == 0)
             {
-                luaL_error(L, "No such node: %s", id);
+                luaL_error(L, "No such node: %s", id_string);
             }
         }
         else
@@ -629,10 +629,10 @@ namespace dmGui
         LuaCheckNodeInternal(L, 1, &hnode);
 
         dmhash_t id = 0;
-        if (lua_isstring(L, 2))
+        size_t length;
+        const char* string = lua_tolstring(L, 2, &length);
+        if (string)
         {
-            size_t length;
-            const char* string = lua_tolstring(L, 2, &length);
             id = dmHashBuffer64(string, length);
         }
         else
@@ -1879,14 +1879,13 @@ namespace dmGui
         HNode hnode;
         InternalNode* n = LuaCheckNodeInternal(L, 1, &hnode);
         (void)n;
-        if (lua_isstring(L, 2))
+        const char* id_string = lua_tostring(L, 2);
+        if (id_string)
         {
-            const char* texture_id = luaL_checkstring(L, 2);
-
-            Result r = SetNodeTexture(scene, hnode, texture_id);
+            Result r = SetNodeTexture(scene, hnode, id_string);
             if (r != RESULT_OK)
             {
-                luaL_error(L, "Texture '%s' is not specified in scene", texture_id);
+                luaL_error(L, "Texture '%s' is not specified in scene", id_string);
             }
         }
         else
@@ -2464,14 +2463,13 @@ namespace dmGui
         InternalNode* n = LuaCheckNodeInternal(L, 1, &hnode);
         (void)n;
 
-        if (lua_isstring(L, 2))
+        const char* id_string = lua_tostring(L, 2);
+        if (id_string)
         {
-            const char* font_id = luaL_checkstring(L, 2);
-
-            Result r = SetNodeFont(scene, hnode, font_id);
+            Result r = SetNodeFont(scene, hnode, id_string);
             if (r != RESULT_OK)
             {
-                luaL_error(L, "Font '%s' is not specified in scene", font_id);
+                luaL_error(L, "Font '%s' is not specified in scene", id_string);
             }
         }
         else
@@ -2528,14 +2526,13 @@ namespace dmGui
         InternalNode* n = LuaCheckNodeInternal(L, 1, &hnode);
         (void)n;
 
-        if (lua_isstring(L, 2))
+        const char* id_string = lua_tostring(L, 2);
+        if (id_string)
         {
-            const char* layer_id = luaL_checkstring(L, 2);
-
-            Result r = SetNodeLayer(scene, hnode, layer_id);
+            Result r = SetNodeLayer(scene, hnode, id_string);
             if (r != RESULT_OK)
             {
-                luaL_error(L, "Layer '%s' is not specified in scene", layer_id);
+                luaL_error(L, "Layer '%s' is not specified in scene", id_string);
             }
         }
         else
@@ -2743,9 +2740,9 @@ namespace dmGui
         Scene* scene = GuiScriptInstance_Check(L);
 
         dmhash_t font_id_hash = 0;
-        if (lua_isstring(L, 1)) {
-            size_t font_id_length;
-            const char* font_id = luaL_checklstring(L, 1, &font_id_length);
+        size_t font_id_length;
+        const char* font_id = lua_tolstring(L, 1, &font_id_length);
+        if (font_id) {
             font_id_hash = dmHashBuffer64(font_id, font_id_length);
         } else {
             font_id_hash = dmScript::CheckHash(L, 1);
@@ -3713,10 +3710,10 @@ namespace dmGui
 
     static int HashTableIndex(lua_State* L)
     {
-        if (lua_isstring(L, -1))
+        size_t length;
+        const char* string = lua_tolstring(L, -1, &length);
+        if (string)
         {
-            size_t length;
-            const char* string = lua_tolstring(L, -1, &length);
             dmScript::PushHash(L, dmHashBuffer64(string, length));
             lua_rawget(L, -3);
             return 1;

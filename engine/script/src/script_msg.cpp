@@ -169,37 +169,40 @@ namespace dmScript
             {
                 url->m_Socket = *phash;
             }
-            else if (lua_isstring(L, 3))
-            {
-                const char* socket_name = lua_tostring(L, 3);
-                dmMessage::Result result = dmMessage::GetSocket(socket_name, &url->m_Socket);
-                if (!(result == dmMessage::RESULT_OK || result == dmMessage::RESULT_NAME_OK_SOCKET_NOT_FOUND))
-                {
-                    if(result == dmMessage::RESULT_INVALID_SOCKET_NAME)
-                    {
-                        return luaL_error(L, "The socket '%s' name is invalid.", socket_name);
-                    }
-                    else
-                    {
-                        return luaL_error(L, "Error when getting socket '%s': %d.", socket_name, result);
-                    }
-                }
-            }
-            else if (lua_isnil(L, 3))
-            {
-                url->m_Socket = 0;
-            }
             else
             {
-                return luaL_error(L, "Invalid type for socket, must be number, string or nil.");
+                const char* socket_name = lua_tostring(L, 3);
+                if (socket_name)
+                {
+                    dmMessage::Result result = dmMessage::GetSocket(socket_name, &url->m_Socket);
+                    if (!(result == dmMessage::RESULT_OK || result == dmMessage::RESULT_NAME_OK_SOCKET_NOT_FOUND))
+                    {
+                        if(result == dmMessage::RESULT_INVALID_SOCKET_NAME)
+                        {
+                            return luaL_error(L, "The socket '%s' name is invalid.", socket_name);
+                        }
+                        else
+                        {
+                            return luaL_error(L, "Error when getting socket '%s': %d.", socket_name, result);
+                        }
+                    }
+                }
+                else if (lua_isnil(L, 3))
+                {
+                    url->m_Socket = 0;
+                }
+                else
+                {
+                    return luaL_error(L, "Invalid type for socket, must be number, string or nil.");
+                }
             }
         }
         else if (strcmp("path", key) == 0)
         {
-            if (lua_isstring(L, 3))
+            size_t length;
+            const char* string = lua_tolstring(L, 3, &length);
+            if (string)
             {
-                size_t length;
-                const char* string = lua_tolstring(L, 3, &length);
                 url->m_Path = dmHashBuffer64(string, length);
             }
             else if (lua_isnil(L, 3))
@@ -221,10 +224,10 @@ namespace dmScript
         }
         else if (strcmp("fragment", key) == 0)
         {
-            if (lua_isstring(L, 3))
+            size_t length;
+            const char* string = lua_tolstring(L, 3, &length);
+            if (string)
             {
-                size_t length;
-                const char* string = lua_tolstring(L, 3, &length);
                 url->m_Fragment = dmHashBuffer64(string, length);
             }
             else if (lua_isnil(L, 3))
@@ -388,10 +391,10 @@ namespace dmScript
             }
             if (!lua_isnil(L, 2))
             {
-                if (lua_isstring(L, 2))
+                size_t path_length;
+                const char* path = lua_tolstring(L, 2, &path_length);
+                if (path)
                 {
-                    size_t path_length;
-                    const char* path = lua_tolstring(L, 2, &path_length);
                     if (lua_isnil(L, 1) || (lua_isstring(L, 1) && *lua_tostring(L, 1) == '\0'))
                     {
                         if (path_length > 0)
@@ -429,10 +432,10 @@ namespace dmScript
             }
             if (!lua_isnil(L, 3))
             {
-                if (lua_isstring(L, 3))
+                size_t length;
+                const char* string = lua_tolstring(L, 3, &length);
+                if (string)
                 {
-                    size_t length;
-                    const char* string = lua_tolstring(L, 3, &length);
                     url.m_Fragment = dmHashBuffer64(string, length);
                 }
                 else
@@ -506,10 +509,10 @@ namespace dmScript
         ResolveURL(L, 1, &receiver, &sender);
 
         dmhash_t message_id;
-        if (lua_isstring(L, 2))
+        size_t id_length;
+        const char* id_string = lua_tolstring(L, 2, &id_length);
+        if (id_string)
         {
-            size_t id_length;
-            const char* id_string = lua_tolstring(L, 2, &id_length);
             message_id = dmHashBuffer64(id_string, id_length);
         }
         else
@@ -688,13 +691,12 @@ namespace dmScript
         else
         {
 
-            const char* url = 0;
+            const char* url = lua_tostring(L, index);
             dmMessage::StringURL string_url;
             dmMessage::Result parse_url_result;
-            if (lua_isstring(L, index))
+            if (url)
             {
                 // Make sure we get and parse the url only once
-                url = lua_tostring(L, index);
                 parse_url_result = dmMessage::ParseURL(url, &string_url);
                 if (parse_url_result != dmMessage::RESULT_OK)
                 {

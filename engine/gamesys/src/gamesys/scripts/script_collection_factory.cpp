@@ -54,10 +54,10 @@ namespace dmGameSystem
 
     static int HashTableIndex(lua_State* L)
     {
-        if (lua_isstring(L, -1))
+        size_t length;
+        const char* string = lua_tolstring(L, -1, &length);
+        if (string)
         {
-            size_t length;
-            const char* string = lua_tolstring(L, -1, &length);
             dmScript::PushHash(L, dmHashBuffer64(string, length));
             lua_rawget(L, -3);
             return 1;

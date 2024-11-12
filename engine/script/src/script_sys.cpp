@@ -461,11 +461,7 @@ union SaveLoadBuffer
         DM_LUA_STACK_CHECK(L, 1);
 
         const char* key = luaL_checkstring(L, 1);
-        const char* default_value = 0;
-        if (lua_isstring(L, 2))
-        {
-            default_value = lua_tostring(L, 2);
-        }
+        const char* default_value = lua_tostring(L, 2);
 
         dmConfigFile::HConfig config_file = GetConfigFile(L);
         if (config_file)
@@ -1223,11 +1219,13 @@ union SaveLoadBuffer
         DM_LUA_STACK_CHECK(L, 0);
 
 #define PUSH_FIELD(name, index) \
-        if (lua_isstring(L, index)) { \
+        { \
             size_t length; \
-            const char* string = luaL_checklstring(L, index, &length); \
-            lua_pushlstring(L, string, length); \
-            lua_setfield(L, -2, name);\
+            const char* string = lua_tolstring(L, index, &length); \
+            if (string) { \
+                lua_pushlstring(L, string, length); \
+                lua_setfield(L, -2, name); \
+            } \
         }
 
         lua_newtable(L);

@@ -620,10 +620,10 @@ namespace dmGameObject
             return luaL_error(L, "go.get can only access instances within the same collection.");
         }
         dmhash_t property_id = 0;
-        if (lua_isstring(L, 2))
+        size_t id_length;
+        const char* id_string = lua_tolstring(L, 2, &id_length);
+        if (id_string)
         {
-            size_t id_length;
-            const char* id_string = lua_tolstring(L, 2, &id_length);
             property_id = dmHashBuffer64(id_string, id_length);
         }
         else
@@ -818,10 +818,10 @@ namespace dmGameObject
         }
         dmhash_t property_id = 0;
 
-        if (lua_isstring(L, 2))
+        size_t id_length;
+        const char* id_string = lua_tolstring(L, 2, &id_length);
+        if (id_string)
         {
-            size_t id_length;
-            const char* id_string = lua_tolstring(L, 2, &id_length);
             property_id = dmHashBuffer64(id_string, id_length);
         }
         else
@@ -1603,10 +1603,10 @@ namespace dmGameObject
             luaL_error(L, "go.animate can only animate instances within the same collection.");
         }
         dmhash_t property_id = 0;
-        if (lua_isstring(L, 2))
+        size_t id_length;
+        const char* id_string = lua_tolstring(L, 2, &id_length);
+        if (id_string)
         {
-            size_t id_length;
-            const char* id_string = lua_tolstring(L, 2, &id_length);
             property_id = dmHashBuffer64(id_string, id_length);
         }
         else
@@ -1757,10 +1757,10 @@ namespace dmGameObject
         dmhash_t property_id = 0;
         if (top >= 2 && !lua_isnil(L, 2))
         {
-            if (lua_isstring(L, 2))
+            size_t id_length;
+            const char* id_string = lua_tolstring(L, 2, &id_length);
+            if (id_string)
             {
-                size_t id_length;
-                const char* id_string = lua_tolstring(L, 2, &id_length);
                 property_id = dmHashBuffer64(id_string, id_length);
             }
             else

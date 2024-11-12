@@ -220,11 +220,11 @@ namespace dmGameObject
         lua_pushnil(L);
         while (lua_next(L, -2) != 0)
         {
-            if (lua_isstring(L, -2))
+            size_t length;
+            const char* string = lua_tolstring(L, -2, &length);
+            if (string)
             {
                 void* userdata = 0;
-                size_t length;
-                const char* string = lua_tolstring(L, -2, &length);
                 dmhash_t id = dmHashBuffer64(string, length);
                 switch(GetPropertyType(L, -1, &userdata))
                 {
