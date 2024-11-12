@@ -1067,7 +1067,7 @@ namespace dmRender
         {
             return (dmGraphics::HRenderTarget) CheckAssetHandle(L, index, i->m_RenderContext->m_GraphicsContext, dmGraphics::ASSET_TYPE_RENDER_TARGET);
         }
-        else if (dmScript::IsHash(L, index) || lua_isstring(L, index))
+        else if (dmScript::IsHash(L, index) || lua_type(L, index) == LUA_TSTRING)
         {
             dmhash_t rt_id                  = dmScript::CheckHashOrString(L, index);
             RenderResource* render_resource = i->m_RenderResources.Get(rt_id);
@@ -1435,7 +1435,7 @@ namespace dmRender
             asset_handle = (dmGraphics::HAssetHandle) lua_tonumber(L, 2);
             asset_type   = dmGraphics::GetAssetType(asset_handle);
         }
-        else if (dmScript::IsHash(L, 2) || lua_isstring(L, 2))
+        else if (dmScript::IsHash(L, 2) || lua_type(L, 2) == LUA_TSTRING)
         {
             dmhash_t rt_id                  = dmScript::CheckHashOrString(L, 2);
             RenderResource* render_resource = i->m_RenderResources.Get(rt_id);
