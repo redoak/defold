@@ -37,7 +37,7 @@ int dmSnPrintf(char *buffer, size_t count, const char *format, ...)
 #endif
     va_end(argp);
     // MS-compliance
-    if (count == 0 || (count > 0 && result >= (int)count))
+    if (result >= (int)count)
         return -1;
     return result;
 }
