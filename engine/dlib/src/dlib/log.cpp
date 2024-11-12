@@ -659,15 +659,20 @@ void LogInternal(LogSeverity severity, const char* domain, const char* format, .
     char* str_buf = &tmp_buf[sizeof(dmLog::LogMessage)];
 
     int n = 0;
-    n += dmSnPrintf(str_buf + n, dmLog::MAX_STRING_SIZE - n, "%s:%s: ", severity_str, domain);
+    int r = 0;
+    r = dmSnPrintf(str_buf + n, dmLog::MAX_STRING_SIZE - n, "%s:%s: ", severity_str, domain);
+    n = r < 0 ? strlen(str_buf) : n + r;
+
     if (n < dmLog::MAX_STRING_SIZE)
     {
-        n += vsnprintf(str_buf + n, dmLog::MAX_STRING_SIZE - n, format, lst);
+        r = vsnprintf(str_buf + n, dmLog::MAX_STRING_SIZE - n, format, lst);
+        n = r < 0 ? strlen(str_buf) : n + r;
     }
 
     if (n < dmLog::MAX_STRING_SIZE)
     {
-        n += dmSnPrintf(str_buf + n, dmLog::MAX_STRING_SIZE - n, "\n");
+        r = dmSnPrintf(str_buf + n, dmLog::MAX_STRING_SIZE - n, "\n");
+        n = r < 0 ? strlen(str_buf) : n + r;
     }
 
     if (n >= dmLog::MAX_STRING_SIZE)
