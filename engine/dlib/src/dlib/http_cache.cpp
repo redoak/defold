@@ -498,7 +498,7 @@ namespace dmHttpCache
         handle->m_File = f;
         handle->m_Filename = file_name;
         handle->m_IdentifierHash = identifier_hash;
-        handle->m_UriHash = dmHashString64(uri);
+        handle->m_UriHash = uri_hash;
         handle->m_Error = 0;
         *cache_creator = handle;
 

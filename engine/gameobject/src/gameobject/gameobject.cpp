@@ -1488,7 +1488,8 @@ namespace dmGameObject
         {
             const dmGameObjectDDF::InstanceDesc& instance_desc = collection_desc->m_Instances[i];
 
-            dmhash_t *instance_id = id_mapping->Get(dmHashString64(instance_desc.m_Id));
+            uint64_t instance_id_hash = dmHashString64(instance_desc.m_Id);
+            dmhash_t *instance_id = id_mapping->Get(instance_id_hash);
             assert(instance_id);
 
             dmGameObject::HInstance instance = dmGameObject::GetInstanceFromIdentifier(collection, *instance_id);
@@ -1532,7 +1533,7 @@ namespace dmGameObject
                         }
 
                         HPropertyContainer lua_properties = 0x0;
-                        HPropertyContainer* instance_properties = property_buffers->Get(dmHashString64(instance_desc.m_Id));
+                        HPropertyContainer* instance_properties = property_buffers->Get(instance_id_hash);
                         if (instance_properties != 0x0)
                         {
                             if (strcmp(type->m_Name, "scriptc") == 0)
