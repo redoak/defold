@@ -48,20 +48,30 @@ namespace dmPPrint
         }
 
         int c = m_BufferSize - m_Cursor;
+        int written =
     #if defined(_WIN32)
-        _vsnprintf_s(m_Buffer + m_Cursor, c, _TRUNCATE, format, argp);
+            _vsnprintf_s(m_Buffer + m_Cursor, c, _TRUNCATE, format, argp);
     #else
-        vsnprintf(m_Buffer + m_Cursor, c, format, argp);
+            vsnprintf(m_Buffer + m_Cursor, c, format, argp);
     #endif
 
         m_Buffer[m_BufferSize-1] = '\0';
-        m_Cursor = strlen(m_Buffer);
+        int untruncated = 0;
+        if (written < 0)
+        {
+            m_Cursor = strlen(m_Buffer);
+        }
+        else
+        {
+            untruncated = m_Cursor + written;
+            m_Cursor = dmMath::Min(untruncated, m_BufferSize - 1);
+        }
 
         if (strchr(format, '\n')) {
             m_StartLine = true;
         }
         va_end(argp);
-        assert(m_Cursor <= m_BufferSize);
+        assert(untruncated < m_BufferSize);
     }
 
     void Printer::SetIndent(int indent)
