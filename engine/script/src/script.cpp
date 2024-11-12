@@ -806,12 +806,12 @@ namespace dmScript
         return false;
     }
 
-    bool ResolvePath(lua_State* L, const char* path, uint32_t path_size, dmhash_t& out_hash) {
+    bool ResolvePath(lua_State* L, const char* path, uint32_t path_length, dmhash_t& out_hash) {
         DM_LUA_STACK_CHECK(L, 0);
         GetInstance(L);
         if (GetMetaFunction(L, -1, META_TABLE_RESOLVE_PATH, sizeof(META_TABLE_RESOLVE_PATH) - 1)) {
             lua_pushvalue(L, -2);
-            lua_pushlstring(L, path, path_size);
+            lua_pushlstring(L, path, path_length);
             lua_call(L, 2, 1);
             out_hash = CheckHash(L, -1);
             lua_pop(L, 2);

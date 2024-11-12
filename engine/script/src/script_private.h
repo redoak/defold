@@ -82,7 +82,7 @@ namespace dmScript
 
     HContext GetScriptContext(lua_State* L);
 
-    bool ResolvePath(lua_State* L, const char* path, uint32_t path_size, dmhash_t& out_hash);
+    bool ResolvePath(lua_State* L, const char* path, uint32_t path_length, dmhash_t& out_hash);
 
     bool GetURL(lua_State* L, dmMessage::URL& out_url);
 

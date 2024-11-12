@@ -170,10 +170,10 @@ namespace dmGameObject
      * Example: if #instance is part of a sub-collection in the root-collection named "sub" and id == "a" the returned identifier represents the path "sub.a"
      * @param instance Instance to absolute identifier to
      * @param id Identifier relative to #instance
-     * @param id_size Lenght of the id
+     * @param id_length Length of the id string
      * @return Absolute identifier
      */
-    dmhash_t GetAbsoluteIdentifier(HInstance instance, const char* id, uint32_t id_size);
+    dmhash_t GetAbsoluteIdentifier(HInstance instance, const char* id, uint32_t id_length);
 
     /**
      * Get component index from component identifier. This function has complexity O(n), where n is the number of components of the instance.

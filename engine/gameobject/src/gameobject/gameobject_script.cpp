@@ -298,11 +298,11 @@ namespace dmGameObject
         out_url->m_Fragment = instance->m_Prototype->m_Components[i->m_ComponentIndex].m_Id;
     }
 
-    static dmhash_t ScriptInstanceResolvePathCB(uintptr_t resolve_user_data, const char* path, uint32_t path_size) {
+    static dmhash_t ScriptInstanceResolvePathCB(uintptr_t resolve_user_data, const char* path, uint32_t path_length) {
         ScriptInstance* i = (ScriptInstance*)resolve_user_data;
         if (path != 0x0 && *path != 0)
         {
-            return GetAbsoluteIdentifier(i->m_Instance, path, strlen(path));
+            return GetAbsoluteIdentifier(i->m_Instance, path, path_length);
         }
         else
         {
