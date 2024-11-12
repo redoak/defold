@@ -333,7 +333,7 @@ namespace dmGameObject
     {
         ScriptInstance* i = (ScriptInstance*)lua_touserdata(L, 1);
         size_t path_length;
-        const char* path = luaL_checklstring(L, 2, &path_length);
+        const char* path = lua_tolstring(L, 2, &path_length);
 
         if (path != 0x0 && path_length != 0)
         {
